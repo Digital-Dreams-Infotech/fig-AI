@@ -1,0 +1,82 @@
+{
+  "project_info": {
+    "project_number": "855636559547",
+    "project_id": "figai-3f060",
+    "storage_bucket": "figai-3f060.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:855636559547:android:f3383d61c3e62dbea34b9e",
+        "android_client_info": {
+          "package_name": "com.example.fig_ai"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "855636559547-blkbiagsoe3hd5a42rmjqd6ltm0aqrgn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCE_usLAzsdEg6reIK4wQ3DJNApqRYaTu0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "855636559547-blkbiagsoe3hd5a42rmjqd6ltm0aqrgn.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "855636559547-eite5ii08ofvrldvkab7ltk8vq3kn397.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.figAi"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:855636559547:android:79459e910d2ff2f1a34b9e",
+        "android_client_info": {
+          "package_name": "com.example_fig_ai"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "855636559547-blkbiagsoe3hd5a42rmjqd6ltm0aqrgn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCE_usLAzsdEg6reIK4wQ3DJNApqRYaTu0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "855636559547-blkbiagsoe3hd5a42rmjqd6ltm0aqrgn.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "855636559547-eite5ii08ofvrldvkab7ltk8vq3kn397.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.figAi"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
