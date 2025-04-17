@@ -5,7 +5,10 @@ class AuthService {
   final String baseUrl = "https://api.figpromptfinder.com";
   final String Category_baseUrl = "https://api.figpromptfinder.com/aichat";
   final String Sub_Category_baseUrl =
-      "https://api.figpromptfinder.com/aichat/prompt/subcategories/";
+      "https://api.figpromptfinder.com/aichat/subcategories";
+  final String PromptSub_Category_baseUrl =
+      "https://api.figpromptfinder.com/aichat/prompt/subcategories";
+  final String Get_Category = "https://api.figpromptfinder.com/aichat/categories/";
   final String Prompt_baseUrl =
       "https://api.figpromptfinder.com/aichat/prompts/";
   final String Get_celery_response =
@@ -130,6 +133,8 @@ class AuthService {
     return await http.get(url);
   }
 
+
+
   Future<http.Response> updateCategory(
     String token,
     int categoryId,
@@ -169,7 +174,7 @@ class AuthService {
   }
 
   Future<http.Response> getSubCategories(String token, int categoryId) async {
-    final url = Uri.parse("$Sub_Category_baseUrl?prompt_category=$categoryId");
+    final url = Uri.parse("$Sub_Category_baseUrl/?category=$categoryId");
     // final url = Uri.parse("https://api.figpromptfinder.com/aichat/prompt/subcategories/?prompt_category=6");
 
     final response = await http.get(
@@ -183,6 +188,20 @@ class AuthService {
     return response;
   }
 
+  Future<http.Response> getPromptSubCategories(String token, int categoryId) async {
+    final url = Uri.parse("$PromptSub_Category_baseUrl/?prompt_category=$categoryId");
+    // final url = Uri.parse("https://api.figpromptfinder.com/aichat/prompt/subcategories/?prompt_category=6");
+
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    return response;
+  }
 
   Future<http.Response> updateSubCategory(
     String token,

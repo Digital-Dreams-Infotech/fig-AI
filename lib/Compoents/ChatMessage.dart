@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
+import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ChatMessage extends StatefulWidget {
   final String text;
@@ -27,11 +29,60 @@ class ChatMessage extends StatefulWidget {
 class _ChatMessageState extends State<ChatMessage> {
   bool _isEditing = false;
   late TextEditingController _editController;
+  bool _isLiked = false;
+  bool _isDisliked = false;
 
   @override
   void initState() {
     super.initState();
     _editController = TextEditingController(text: widget.text);
+    _loadLikeDislikeState();
+  }
+
+  // Load the like/dislike state from SharedPreferences
+  Future<void> _loadLikeDislikeState() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _isLiked = prefs.getBool('like_${widget.text}') ?? false;
+      _isDisliked = prefs.getBool('dislike_${widget.text}') ?? false;
+    });
+  }
+
+  // Save the like/dislike state to SharedPreferences
+  Future<void> _saveLikeDislikeState() async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setBool('like_${widget.text}', _isLiked);
+    prefs.setBool('dislike_${widget.text}', _isDisliked);
+  }
+
+  void _toggleLike() {
+    setState(() {
+      _isLiked = !_isLiked;
+      _isDisliked = false;  // Dislike should be reset if like is pressed
+    });
+    _saveLikeDislikeState();
+  }
+
+  void _toggleDislike() {
+    setState(() {
+      _isDisliked = !_isDisliked;
+      _isLiked = false;  // Like should be reset if dislike is pressed
+    });
+    _saveLikeDislikeState();
+  }
+
+  void _copyToClipboard() {
+    Clipboard.setData(ClipboardData(text: widget.text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Response copied!'),
+        duration: Duration(milliseconds: 800),
+      ),
+    );
+  }
+
+  void _shareText() {
+    Share.share(widget.text);
   }
 
   Widget _buildMessageContent(BuildContext context, String text) {
@@ -66,12 +117,10 @@ class _ChatMessageState extends State<ChatMessage> {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 7, horizontal: 12),
       child: Column(
-        crossAxisAlignment:
-            widget.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: widget.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment:
-                widget.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            mainAxisAlignment: widget.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (!widget.isUser)
@@ -106,37 +155,6 @@ class _ChatMessageState extends State<ChatMessage> {
                             ),
                           ),
                         )
-                      else if (_isEditing)
-                        TextField(
-                          controller: _editController,
-                          autofocus: true,
-                          maxLines: null,
-                          minLines: 3,
-                          keyboardType: TextInputType.multiline,
-                          textInputAction: TextInputAction.newline,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: InputDecoration(
-                            hintText: 'Edit your message...',
-                            hintStyle: const TextStyle(color: Colors.white30),
-                            filled: true,
-                            fillColor: Colors.black26,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(
-                                color: Colors.white10,
-                              ),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: 12,
-                              horizontal: 12,
-                            ),
-                          ),
-                          onSubmitted: (newText) {
-                            widget.onEdit?.call(newText);
-                            // _sendMessage();
-                            setState(() => _isEditing = false);
-                          },
-                        )
                       else
                         Builder(
                           builder: (context) {
@@ -157,49 +175,50 @@ class _ChatMessageState extends State<ChatMessage> {
               ),
             ],
           ),
-          if (widget.isUser && widget.imagePath == null)
+
+          // Add copy/share buttons only for received messages
+          if (!widget.isUser)
             Padding(
-              padding: const EdgeInsets.only(right: 8.0, top: 4),
+              padding: const EdgeInsets.only(top: 8.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (_isEditing) ...[
-                    IconButton(
-                      icon: const Icon(
-                        Icons.check,
-                        size: 16,
-                        color: Colors.green,
-                      ),
-                      onPressed: () {
-                        widget.onEdit?.call(_editController.text);
-                        setState(() => _isEditing = false);
-                      },
+                  IconButton(
+                    icon: const Icon(
+                      Icons.copy,
+                      size: 20,
+                      color: Colors.white60,
                     ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.close,
-                        size: 16,
-                        color: Colors.redAccent,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _editController.text = widget.text;
-                          _isEditing = false;
-                        });
-                      },
+                    tooltip: 'Copy response',
+                    onPressed: _copyToClipboard,
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.share,
+                      size: 20,
+                      color: Colors.white60,
                     ),
-                  ] else
-                    IconButton(
-                      icon: const Icon(
-                        Icons.edit,
-                        size: 16,
-                        color: Colors.grey,
-                      ),
-                      onPressed: () {
-                        setState(() => _isEditing = true);
-                      },
+                    tooltip: 'Share response',
+                    onPressed: _shareText,
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      _isLiked ? Icons.thumb_up : Icons.thumb_up_alt_outlined,
+                      size: 20,
+                      color: Colors.blue,
                     ),
+                    tooltip: 'Like this message',
+                    onPressed: _toggleLike,
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      _isDisliked ? Icons.thumb_down : Icons.thumb_down_alt_outlined,
+                      size: 20,
+                      color: Colors.red,
+                    ),
+                    tooltip: 'Dislike this message',
+                    onPressed: _toggleDislike,
+                  ),
                 ],
               ),
             ),

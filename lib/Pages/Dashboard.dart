@@ -56,6 +56,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _isCreatingChat = false;
   bool _isOwnChat = false;
 
+  bool isLoadingHistory = false;
+  bool isLoadingOwnChats = false;
+  bool isLoadingnewchat = false;
+  ScrollController _scrollController = ScrollController();
+
+
   @override
   void initState() {
     super.initState();
@@ -67,6 +73,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     await loadUserName();
     await loadUserProfile();
     await loadCategories();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> launchExternalUrl(String urlString) async {
+    final Uri url = Uri.parse(urlString);
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      debugPrint('❌ Could not launch $url');
+    }
   }
 
   Future<void> loadUserName() async {
@@ -156,6 +175,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _getOwnChat() async {
+    if (isLoadingOwnChats) return;
+
+    setState(() => isLoadingOwnChats = true);
     try {
       AuthService auth = AuthService();
       final response = await auth.getAllChats(token!);
@@ -171,77 +193,96 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     } catch (e) {
       print("Error fetching chats: $e");
+    } finally {
+      setState(() => isLoadingOwnChats = false);
     }
   }
 
   Future<void> _showHistory(BuildContext context, List<dynamic> chats) async {
+    final validChats =
+    chats.where((chat) {
+      final prompts = chat['prompts'] as List<dynamic>? ?? [];
+      final firstPrompt = prompts.isNotEmpty ? prompts.first : null;
+      final requestText =
+      (firstPrompt?['request_text'] ?? '').toString().trim();
+      return requestText.isNotEmpty;
+    }).toList();
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              backgroundColor: const Color(0xFF1E1E2E),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              contentPadding: EdgeInsets.zero,
-              titlePadding: EdgeInsets.zero,
-              actionsPadding: EdgeInsets.zero,
-              content: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E1E2E),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Title
-                    const Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        "📜 Chat History",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1E1E2E),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          contentPadding: EdgeInsets.zero,
+          titlePadding: EdgeInsets.zero,
+          actionsPadding: EdgeInsets.zero,
+          content: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E1E2E),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Title
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    "📜 Chat History",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 16),
+                  ),
+                ),
+                const SizedBox(height: 16),
 
-                    // Chat history content
-                    SizedBox(
-                      width: double.maxFinite,
-                      height: 350,
-                      child:
-                      chats.isEmpty
-                          ? const Center(
-                        child: Text(
-                          "No chat history available.",
-                          style: TextStyle(color: Colors.white54),
-                        ),
-                      )
-                          : Scrollbar(
+                // Chat history content
+                SizedBox(
+                  width: double.maxFinite,
+                  height: MediaQuery.of(context).size.height * 0.4,
+                  child:
+                  validChats.isEmpty
+                      ? const Center(
+                    child: Text(
+                      "No chat history available.",
+                      style: TextStyle(color: Colors.white54),
+                    ),
+                  )
+                      : StatefulBuilder(
+                    builder: (context, setState) {
+                      return Scrollbar(
                         child: ListView.separated(
                           separatorBuilder:
                               (_, __) => const Divider(
                             color: Colors.white10,
                             thickness: 0.5,
                           ),
-                          itemCount: chats.length,
+                          itemCount: validChats.length,
                           itemBuilder: (context, index) {
-                            final chat = chats[index];
+                            final chat = validChats[index];
                             final int chatId = chat['id'];
                             final List<dynamic> prompts =
                             chat['prompts'];
+                            // if (prompts.isEmpty ||
+                            //     (prompts.first['request_text'] ?? '')
+                            //         .toString()
+                            //         .trim()
+                            //         .isEmpty) {
+                            //   return const SizedBox.shrink();
+                            // }
 
                             final String request =
-                            prompts.isNotEmpty
-                                ? (prompts.first['request_text'] ??
-                                'No prompt')
-                                : "No prompt";
+                            prompts.first['request_text'];
+
+                            // final String request = prompts.isNotEmpty
+                            //     ? (prompts.first['request_text'] ?? '')
+                            //     : "No prompt";
 
                             return Row(
                               crossAxisAlignment:
@@ -335,20 +376,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         chatId,
                                       );
                                       if (success) {
-                                        // Remove the chat from the list in the dialog
                                         setState(() {
-                                          chats.removeAt(index);
+                                          validChats.removeAt(index);
                                         });
-
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              "Chat deleted",
-                                            ),
-                                          ),
-                                        );
+                                        // Navigator.of(context)
+                                        //     .pop(); // Close history dialog
+                                        //_getOwnChat(); // Refresh chat list
                                       }
                                     }
                                   },
@@ -357,36 +390,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             );
                           },
                         ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Close button
-                    SizedBox(
-                      width: double.infinity,
-                      child: TextButton(
-                        style: TextButton.styleFrom(
-                          backgroundColor: Colors.deepPurpleAccent.withOpacity(
-                            0.2,
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text(
-                          "Close",
-                          style: TextStyle(color: Colors.white70),
-                        ),
-                      ),
-                    ),
-                  ],
+                      );
+                    },
+                  ),
                 ),
-              ),
-            );
-          },
+
+                const SizedBox(height: 16),
+
+                // Close button
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.deepPurpleAccent.withOpacity(0.2),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text(
+                      "Close",
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -411,9 +442,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       AuthService auth = AuthService();
       final response = await auth.deletChat(token!, chatId);
-
       if (response.statusCode == 200 || response.statusCode == 204) {
         print("Delete Chat Successfully");
+        // Navigator.pop(context);
+        // _getOwnChat();
         return true;
       } else {
         print("Not Delete Chat");
@@ -561,6 +593,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _showChatsPopup(List<dynamic> chats) {
+    final List<dynamic> validChats =
+    chats
+        .where(
+          (chat) =>
+      chat['title'] != null &&
+          chat['title'].toString().trim().isNotEmpty,
+    )
+        .toList();
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -602,75 +642,92 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       width: double.maxFinite,
                       height: 300,
                       child:
-                      chats.isEmpty
+                      validChats.isEmpty
                           ? const Center(
                         child: Text(
                           "No chats available.",
                           style: TextStyle(color: Colors.white54),
                         ),
                       )
-                          : Scrollbar(
-                        child: ListView.separated(
-                          separatorBuilder:
-                              (_, __) => const Divider(
-                            color: Colors.white10,
-                            thickness: 0.5,
-                          ),
-                          itemCount: chats.length,
-                          itemBuilder: (context, index) {
-                            final chat = chats[index];
-                            slug = chat['slug'];
-
-                            return ListTile(
-                              tileColor: const Color(0xFF2A2A40),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                          : StatefulBuilder(
+                        builder: (context, setState) {
+                          return Scrollbar(
+                            child: ListView.separated(
+                              separatorBuilder:
+                                  (_, __) => const Divider(
+                                color: Colors.white10,
+                                thickness: 0.5,
                               ),
-                              title: Text(
-                                chat['title'] != null &&
-                                    chat['title']
-                                        .toString()
-                                        .trim()
-                                        .isNotEmpty
-                                    ? chat['title']
-                                    : "Untitled Chat",
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                ),
-                              ),
-                              trailing: IconButton(
-                                icon: const Icon(
-                                  Icons.delete,
-                                  color: Colors.redAccent,
-                                ),
-                                onPressed: () async {
-                                  bool deleted = await _deleteChat(
-                                    chat['id'],
-                                  );
-                                  if (deleted) {
-                                    setState(() {
-                                      chats.removeAt(index);
-                                    });
-                                  }
-                                },
-                              ),
-                              onTap: () {
-                                Navigator.pop(context);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) => ChatScreen(
-                                      chatId: chat['id'],
-                                      chatSlug: chat['slug'],
-                                      prompts: chat["prompts"],
+                              itemCount: validChats.length,
+                              itemBuilder: (context, index) {
+                                final chat = validChats[index];
+                                slug = chat['slug'];
+                                return ListTile(
+                                  tileColor: const Color(0xFF2A2A40),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      10,
                                     ),
                                   ),
+                                  title:
+                                  (chat['title']
+                                      ?.toString()
+                                      .trim()
+                                      .isEmpty ??
+                                      true)
+                                      ? const SizedBox.shrink()
+                                      : Text(
+                                    chat['title'],
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                    ),
+                                  ),
+
+                                  trailing:
+                                  (chat['title']
+                                      ?.toString()
+                                      .trim()
+                                      .isEmpty ??
+                                      true)
+                                      ? null
+                                      : IconButton(
+                                    icon: const Icon(
+                                      Icons.delete,
+                                      color: Colors.redAccent,
+                                    ),
+                                    onPressed: () async {
+                                      bool deleted =
+                                      await _deleteChat(
+                                        chat['id'],
+                                      );
+                                      if (deleted) {
+                                        setState(() {
+                                          validChats.removeAt(
+                                            index,
+                                          );
+                                        });
+                                      }
+                                    },
+                                  ),
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) => ChatScreen(
+                                          chatId: chat['id'],
+                                          chatSlug: chat['slug'],
+                                          prompts: chat["prompts"],
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 );
                               },
-                            );
-                          },
-                        ),
+                            ),
+                          );
+                        },
                       ),
                     ),
 
@@ -816,68 +873,101 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       String messageText = _messageController.text.trim();
 
-      Map<String, dynamic>? chatSession;
       if (_messages.isEmpty) {
-        chatSession = await _createNewChatSession();
-
+        final chatSession = await _createNewChatSession();
         if (chatSession == null) {
-          print("chatSession is null, aborting");
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Failed to create chat session")),
+            );
+          }
           return;
         }
-
-        chatId = chatSession['id'];
-        print("New Chat Session Created. Chat ID: $chatId");
+        chatId = chatSession['id'] as int;
       }
 
+      if (!mounted) return;
       setState(() {
-        int newIndex = _messages.length;
         _messages.add(
           ChatMessage(
             text: messageText,
             isUser: true,
-            onEdit: (text) => _editMessage(newIndex, text),
+            onEdit: (text) => _editMessage(_messages.length - 1, text),
           ),
         );
         _messageController.clear();
         _showChat = true;
-
-        _messages.add(
-          ChatMessage(text: "Typing...", isUser: false, onEdit: null),
-        );
       });
 
-      final response = await AuthService().createPrompt(
-        token!,
-        chatId!,
-        messageText,
-        selectedCategoryId!,
-        subCategoryId:
-            _selectedPromptId != null
-                ? int.tryParse(_selectedPromptId) ?? 1
-                : 1,
-      );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToBottom();
+      });
 
       setState(() {
-        _messages.removeWhere((msg) => msg.text == "Typing..." && !msg.isUser);
+        _messages.add(ChatMessage(
+          text: "🤖 Wait AI Generate the response...",
+          isUser: false,
+        ));
       });
 
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        Map<String, dynamic> data = jsonDecode(response.body);
-        String aiReply = data['ai_response'] ?? "No response from AI.";
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToBottom();
+      });
 
-        setState(() {
-          _messages.add(
-            ChatMessage(text: aiReply, isUser: false, onEdit: null),
-          );
-        });
-      } else {
-        print("Prompt creation failed: ${response.statusCode}");
+      print("TOKEN DATA: $token");
+      print("chatId DATA: $chatId");
+      print("MessageText DATA: $messageText");
+      print("selectedCategoryId DATA: $selectedCategoryId");
+      print("selectedCategoryId DATA: $_selectedPromptId");
+
+      try {
+        final response = await AuthService().createPrompt(
+          token!,
+          chatId!,
+          messageText,
+          selectedCategoryId!,
+          subCategoryId: _selectedPromptId != null
+              ? int.tryParse(_selectedPromptId!) ?? 1
+              : 1,
+        );
+
+        if (response.statusCode == 201 && mounted) {
+          Map<String, dynamic> data = jsonDecode(response.body);
+          String aiReply = data['ai_response'] ?? "No response from AI.";
+
+          setState(() {
+            // Remove the loading message and add the AI response
+            _messages.removeLast();
+            _messages.add(ChatMessage(text: aiReply, isUser: false));
+          });
+
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _scrollToBottom();
+          });
+        } else if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text("Failed to get response")));
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
+        }
       }
     } catch (e) {
       print("Exception in _sendMessage: $e");
-      setState(() {
-        _messages.removeWhere((msg) => msg.text == "Typing..." && !msg.isUser);
-      });
+    }
+  }
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
     }
   }
 
@@ -1143,10 +1233,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     style: TextStyle(color: Colors.white),
                   ),
                   onTap: () async {
-                    if (_isCreatingChat) return;
+                    if (isLoadingnewchat) return;
 
-                    _isCreatingChat = true;
-
+                    setState(() => isLoadingnewchat = true);
                     try {
                       final result = await _createNewChatSession();
                       if (result != null) {
@@ -1157,62 +1246,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder:
-                                  (context) =>
-                                  ChatScreen(
-                                    chatId: chatId,
-                                    chatSlug: slug,
-                                    prompts: [],
-                                  ),
+                              builder: (context) => ChatScreen(
+                                chatId: chatId,
+                                chatSlug: slug,
+                                prompts: [],
+                              ),
                             ),
                           );
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text("Failed to create new chat"),
-                            ),
+                                content: Text("Failed to create new chat")),
                           );
                         }
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text("Failed to create new chat"),
-                          ),
+                              content: Text("Failed to create new chat")),
                         );
                       }
+                    } catch (e) {
+                      print("Error creating new chat: $e");
                     } finally {
-                        _isCreatingChat = false;
+                      setState(() => isLoadingnewchat = false);
                     }
-                  }
+                    ;
+                  },
                 ),
-
                 ListTile(
                   title: const Text(
                     'Own Chats',
                     style: TextStyle(color: Colors.white),
                   ),
                   onTap: () {
-                    if(_isOwnChat) return;
-
-                    _isOwnChat = true;
                     _getOwnChat();
-                    _isOwnChat = false;
                   },
                 ),
-
                 ListTile(
                   title: const Text(
                     'History',
                     style: TextStyle(color: Colors.white),
                   ),
                   onTap: () async {
+                    if (isLoadingHistory) return;
+
+                    setState(() => isLoadingHistory = true);
+
                     try {
                       AuthService auth = AuthService();
                       final response = await auth.getAllChats(token!);
                       if (response.statusCode == 200) {
-                        final Map<String, dynamic> data = jsonDecode(
-                          response.body,
-                        );
+                        final Map<String, dynamic> data =
+                        jsonDecode(response.body);
                         final List<dynamic> chats = data['chats'];
                         await _showHistory(context, chats);
                       } else {
@@ -1220,26 +1305,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       }
                     } catch (e) {
                       print("Error fetching chats: $e");
+                    } finally {
+                      setState(() => isLoadingHistory = false);
                     }
+                    // try {
+                    //   AuthService auth = AuthService();
+                    //   final response = await auth.getAllChats(token!);
+                    //   if (response.statusCode == 200) {
+                    //     final Map<String, dynamic> data =
+                    //         jsonDecode(response.body);
+                    //     final List<dynamic> chats = data['chats'];
+                    //     await _showHistory(context, chats);
+                    //   } else {
+                    //     print("Failed to fetch chats: ${response.body}");
+                    //   }
+                    // } catch (e) {
+                    //   print("Error fetching chats: $e");
+                    // }
                   },
                 ),
+
                 ListTile(
-                  title: Text(
-                    'About Us',
+                  title: const Text(
+                    'Privacy Policy',
                     style: TextStyle(color: Colors.white),
                   ),
                   onTap: () async {
-                    final Uri url = Uri.parse(
-                      'https://figpromptfinder.com/about',
-                    );
-                    if (await canLaunchUrl(url)) {
-                      await launchUrl(
-                        url,
-                        mode: LaunchMode.externalApplication,
-                      );
-                    } else {
-                      throw 'Could not launch $url';
-                    }
+                    launchExternalUrl('https://figpromptfinder.com/privacy');
+                    // final Uri url =
+                    //     Uri.parse('https://figpromptfinder.com/privacy');
+                    // if (await canLaunchUrl(url)) {
+                    //   await launchUrl(url,
+                    //       mode: LaunchMode.externalApplication);
+                    // } else {
+                    //   throw 'Could not launch $url';
+                    // }
                   },
                 ),
                 ListTile(
@@ -1248,17 +1348,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     style: TextStyle(color: Colors.white),
                   ),
                   onTap: () async {
-                    final Uri url = Uri.parse(
-                      'https://figpromptfinder.com/terms',
-                    );
-                    if (await canLaunchUrl(url)) {
-                      await launchUrl(
-                        url,
-                        mode: LaunchMode.externalApplication,
-                      );
-                    } else {
-                      throw 'Could not launch $url';
-                    }
+                    launchExternalUrl('https://figpromptfinder.com/terms');
                   },
                 ),
                 ListTile(
@@ -1267,17 +1357,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     style: TextStyle(color: Colors.white),
                   ),
                   onTap: () async {
-                    final Uri url = Uri.parse(
-                      'https://figpromptfinder.com/privacy',
-                    );
-                    if (await canLaunchUrl(url)) {
-                      await launchUrl(
-                        url,
-                        mode: LaunchMode.externalApplication,
-                      );
-                    } else {
-                      throw 'Could not launch $url';
-                    }
+                    launchExternalUrl('https://figpromptfinder.com/privacy');
                   },
                 ),
 
@@ -1351,10 +1431,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           }
                         },
                         items: [
-                          const DropdownMenuItem<String>(
-                            value: 'create_prompt',
-                            child: Text('Create Prompt'),
-                          ),
+                          // const DropdownMenuItem<String>(
+                          //   value: 'create_prompt',
+                          //   child: Text('Create Prompt'),
+                          // ),
                           ...categories.map<DropdownMenuItem<String>>((
                             PromptCategory category,
                           ) {
@@ -1580,14 +1660,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               subtitle: 'Keeps content fresh and relevant.',
                             ),
                           ] else ...[
-                            ListView.builder(
-                              physics: const NeverScrollableScrollPhysics(),
-                              shrinkWrap: true,
-                              itemCount: _messages.length,
-                              itemBuilder: (context, index) {
-                                return _messages[index];
-                              },
-                            ),
+                            Container(
+                              height: MediaQuery.of(context).size.height * 0.65,
+                              child: ListView.builder(
+                                controller: _scrollController,
+                                physics: const BouncingScrollPhysics(),
+                                itemCount: _messages.length,
+                                shrinkWrap: true,
+                                itemBuilder: (context, index) {
+                                  return _messages[index];
+                                },
+                              ),
+                            )
                           ],
                         ],
                       ),
