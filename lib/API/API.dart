@@ -188,9 +188,19 @@ class AuthService {
     return response;
   }
 
-  Future<http.Response> getPromptSubCategories(String token, int categoryId) async {
-    final url = Uri.parse("$PromptSub_Category_baseUrl/?prompt_category=$categoryId");
-    // final url = Uri.parse("https://api.figpromptfinder.com/aichat/prompt/subcategories/?prompt_category=6");
+  Future<http.Response> getPromptSubCategories({
+    required String token,
+    required int categoryId,
+    String searchQuery = '',
+    int start = 0,
+    int limit = 10,
+  }) async {
+    final url = Uri.parse(PromptSub_Category_baseUrl).replace(queryParameters: {
+      'prompt_category': categoryId.toString(),
+      'search': searchQuery,
+      'start': start.toString(),
+      'limit': limit.toString(),
+    });
 
     final response = await http.get(
       url,
@@ -202,6 +212,7 @@ class AuthService {
 
     return response;
   }
+
 
   Future<http.Response> updateSubCategory(
     String token,
