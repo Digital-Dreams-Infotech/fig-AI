@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 
 class AuthService {
@@ -8,7 +9,8 @@ class AuthService {
       "https://api.figpromptfinder.com/aichat/subcategories";
   final String PromptSub_Category_baseUrl =
       "https://api.figpromptfinder.com/aichat/prompt/subcategories";
-  final String Get_Category = "https://api.figpromptfinder.com/aichat/categories/";
+  final String Get_Category =
+      "https://api.figpromptfinder.com/aichat/categories/";
   final String Prompt_baseUrl =
       "https://api.figpromptfinder.com/aichat/prompts/";
   final String Get_celery_response =
@@ -31,6 +33,15 @@ class AuthService {
       body: jsonEncode({"auth_token": authToken}),
     );
   }
+
+  // Future<http.Response> loginWithApple(String authToken) async {
+  //   final url = Uri.parse("$baseUrl/");
+  //   return await http.post(
+  //     url,
+  //     headers: {"Content-Type": "application/json"},
+  //     body: jsonEncode({"auth_token": authToken}),
+  //   );
+  // }
 
   Future<http.Response> registerUser(String email, String password) async {
     final url = Uri.parse("$baseUrl/user/register/");
@@ -133,8 +144,6 @@ class AuthService {
     return await http.get(url);
   }
 
-
-
   Future<http.Response> updateCategory(
     String token,
     int categoryId,
@@ -188,8 +197,10 @@ class AuthService {
     return response;
   }
 
-  Future<http.Response> getPromptSubCategories(String token, int categoryId) async {
-    final url = Uri.parse("$PromptSub_Category_baseUrl/?prompt_category=$categoryId");
+  Future<http.Response> getPromptSubCategories(
+      String token, int categoryId) async {
+    final url =
+        Uri.parse("$PromptSub_Category_baseUrl/?prompt_category=$categoryId");
     // final url = Uri.parse("https://api.figpromptfinder.com/aichat/prompt/subcategories/?prompt_category=6");
 
     final response = await http.get(
@@ -267,7 +278,9 @@ class AuthService {
     );
   }
 
-  Future<http.Response> createPrompt(String token,int chatId,String requestText,int categoryId,{int? subCategoryId}) async {
+  Future<http.Response> createPrompt(
+      String token, int chatId, String requestText, int categoryId,
+      {int? subCategoryId}) async {
     final url = Uri.parse(Prompt_baseUrl);
     var request = http.MultipartRequest("POST", url);
     request.headers["Authorization"] = "Bearer $token";
@@ -349,7 +362,8 @@ class AuthService {
   //   return response;
   // }
 
-  Future<http.Response> getPromptCategory(String token, {String? prompt, String? category}) async {
+  Future<http.Response> getPromptCategory(String token,
+      {String? prompt, String? category}) async {
     final url = Uri.parse(PromptCategory);
     final headers = {"Authorization": "Bearer $token"};
 
@@ -563,8 +577,10 @@ class AuthService {
 // ------- XXXXXXXXXXXXXX -----------
 
 // ------------- HISTORY ---------
-  Future<http.Response> getPromptHistoryBySlug(String token, String slug) async {
-    final url = Uri.parse('https://api.figpromptfinder.com/aichat/chats/prompt-history/$slug/');
+  Future<http.Response> getPromptHistoryBySlug(
+      String token, String slug) async {
+    final url = Uri.parse(
+        'https://api.figpromptfinder.com/aichat/chats/prompt-history/$slug/');
     final headers = {
       "Authorization": "Bearer $token",
       "Content-Type": "application/json", // Optional, but good practice

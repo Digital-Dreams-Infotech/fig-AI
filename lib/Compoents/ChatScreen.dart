@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:fig_ai/API/API.dart';
 import 'package:fig_ai/Compoents/ChatMessage.dart';
@@ -9,14 +8,14 @@ import 'package:fig_ai/Models/PromptCategory.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:keyboard_visibility_pro/keyboard_visibility_pro.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../Pages/Log In.dart';
-import 'Dailogbox.dart';
+import 'icon.dart';
 
 class ChatScreen extends StatefulWidget {
   final int chatId;
@@ -65,10 +64,18 @@ class _ChatScreenState extends State<ChatScreen> {
   DateTime? _lastPressedAt;
 
   ScrollController _scrollController = ScrollController();
+  double _scale = 1.0;
 
   @override
   void initState() {
     super.initState();
+    // WidgetsBinding.instance.deferFirstFrame();
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   precacheImage(const AssetImage('assets/image/new-chat.svg'), context)
+    //       .then((_) {
+    //     WidgetsBinding.instance.allowFirstFrame();
+    //   });
+    // });
     initializeDashboard();
   }
 
@@ -118,15 +125,15 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       final response = await authservice.getCategories();
-      print('Status DEAFULT CATEGORY: ${response.statusCode}, Body: ${response.body}');
+      print(
+          'Status DEAFULT CATEGORY: ${response.statusCode}, Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final List<dynamic> jsonCategories = json.decode(response.body);
         setState(() {
-          defaultCategories =
-              jsonCategories
-                  .map((json) => PromptCategory.fromJson(json))
-                  .toList();
+          defaultCategories = jsonCategories
+              .map((json) => PromptCategory.fromJson(json))
+              .toList();
           print('DEFAULT Categories Loaded: $defaultCategories');
 
           if (defaultCategories.isNotEmpty) {
@@ -157,10 +164,9 @@ class _ChatScreenState extends State<ChatScreen> {
       if (response.statusCode == 200) {
         final List<dynamic> jsonCategories = json.decode(response.body);
         setState(() {
-          categories =
-              jsonCategories
-                  .map((json) => PromptCategory.fromJson(json))
-                  .toList();
+          categories = jsonCategories
+              .map((json) => PromptCategory.fromJson(json))
+              .toList();
           print('Categories Loaded: $categories');
 
           if (categories.isNotEmpty) {
@@ -189,9 +195,8 @@ class _ChatScreenState extends State<ChatScreen> {
             ChatMessage(
               text: prompt['request_text'] ?? '',
               isUser: true,
-              onEdit:
-                  (text) =>
-                      _editMessage(_messages.indexOf(_messages.last), text),
+              onEdit: (text) =>
+                  _editMessage(_messages.indexOf(_messages.last), text),
             ),
           );
 
@@ -257,14 +262,13 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _showHistory(BuildContext context, List<dynamic> chats) async {
-    final validChats =
-        chats.where((chat) {
-          final prompts = chat['prompts'] as List<dynamic>? ?? [];
-          final firstPrompt = prompts.isNotEmpty ? prompts.first : null;
-          final requestText =
-              (firstPrompt?['request_text'] ?? '').toString().trim();
-          return requestText.isNotEmpty;
-        }).toList();
+    final validChats = chats.where((chat) {
+      final prompts = chat['prompts'] as List<dynamic>? ?? [];
+      final firstPrompt = prompts.isNotEmpty ? prompts.first : null;
+      final requestText =
+          (firstPrompt?['request_text'] ?? '').toString().trim();
+      return requestText.isNotEmpty;
+    }).toList();
 
     showDialog(
       context: context,
@@ -304,153 +308,144 @@ class _ChatScreenState extends State<ChatScreen> {
                 SizedBox(
                   width: double.maxFinite,
                   height: MediaQuery.of(context).size.height * 0.4,
-                  child:
-                      validChats.isEmpty
-                          ? const Center(
-                            child: Text(
-                              "No chat history available.",
-                              style: TextStyle(color: Colors.white54),
-                            ),
-                          )
-                          : StatefulBuilder(
-                            builder: (context, setState) {
-                              return Scrollbar(
-                                child: ListView.separated(
-                                  separatorBuilder:
-                                      (_, __) => const Divider(
-                                        color: Colors.white10,
-                                        thickness: 0.5,
-                                      ),
-                                  itemCount: validChats.length,
-                                  itemBuilder: (context, index) {
-                                    final chat = validChats[index];
-                                    final int chatId = chat['id'];
-                                    final List<dynamic> prompts =
-                                        chat['prompts'];
-                                    // if (prompts.isEmpty ||
-                                    //     (prompts.first['request_text'] ?? '')
-                                    //         .toString()
-                                    //         .trim()
-                                    //         .isEmpty) {
-                                    //   return const SizedBox.shrink();
-                                    // }
-
-                                    final String request =
-                                        prompts.first['request_text'];
-
-                                    // final String request = prompts.isNotEmpty
-                                    //     ? (prompts.first['request_text'] ?? '')
-                                    //     : "No prompt";
-
-                                    return Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        // Bubble style
-                                        Expanded(
-                                          child: Container(
-                                            padding: const EdgeInsets.all(12),
-                                            margin: const EdgeInsets.symmetric(
-                                              vertical: 6,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFF2A2A40),
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                            ),
-                                            child: Text(
-                                              request,
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(
-                                            Icons.delete,
-                                            color: Colors.redAccent,
-                                          ),
-                                          onPressed: () async {
-                                            final confirm = await showDialog<
-                                              bool
-                                            >(
-                                              context: context,
-                                              builder:
-                                                  (ctx) => AlertDialog(
-                                                    backgroundColor:
-                                                        const Color(0xFF2E2E3E),
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            12,
-                                                          ),
-                                                    ),
-                                                    title: const Text(
-                                                      "Delete Chat",
-                                                      style: TextStyle(
-                                                        color: Colors.white,
-                                                      ),
-                                                    ),
-                                                    content: const Text(
-                                                      "Are you sure you want to delete this chat?",
-                                                      style: TextStyle(
-                                                        color: Colors.white70,
-                                                      ),
-                                                    ),
-                                                    actions: [
-                                                      TextButton(
-                                                        onPressed:
-                                                            () => Navigator.of(
-                                                              ctx,
-                                                            ).pop(false),
-                                                        child: const Text(
-                                                          "Cancel",
-                                                          style: TextStyle(
-                                                            color: Colors.grey,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      TextButton(
-                                                        onPressed:
-                                                            () => Navigator.of(
-                                                              ctx,
-                                                            ).pop(true),
-                                                        child: const Text(
-                                                          "Delete",
-                                                          style: TextStyle(
-                                                            color:
-                                                                Colors
-                                                                    .redAccent,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                            );
-
-                                            if (confirm == true) {
-                                              final success = await _deleteChat(
-                                                chatId,
-                                              );
-                                              if (success) {
-                                                setState(() {
-                                                  validChats.removeAt(index);
-                                                });
-                                                // Navigator.of(context)
-                                                //     .pop(); // Close history dialog
-                                                //_getOwnChat(); // Refresh chat list
-                                              }
-                                            }
-                                          },
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                ),
-                              );
-                            },
+                  child: validChats.isEmpty
+                      ? const Center(
+                          child: Text(
+                            "No chat history available.",
+                            style: TextStyle(color: Colors.white54),
                           ),
+                        )
+                      : StatefulBuilder(
+                          builder: (context, setState) {
+                            return Scrollbar(
+                              child: ListView.separated(
+                                separatorBuilder: (_, __) => const Divider(
+                                  color: Colors.white10,
+                                  thickness: 0.5,
+                                ),
+                                itemCount: validChats.length,
+                                itemBuilder: (context, index) {
+                                  final chat = validChats[index];
+                                  final int chatId = chat['id'];
+                                  final List<dynamic> prompts = chat['prompts'];
+                                  // if (prompts.isEmpty ||
+                                  //     (prompts.first['request_text'] ?? '')
+                                  //         .toString()
+                                  //         .trim()
+                                  //         .isEmpty) {
+                                  //   return const SizedBox.shrink();
+                                  // }
+
+                                  final String request =
+                                      prompts.first['request_text'];
+
+                                  // final String request = prompts.isNotEmpty
+                                  //     ? (prompts.first['request_text'] ?? '')
+                                  //     : "No prompt";
+
+                                  return Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Bubble style
+                                      Expanded(
+                                        child: Container(
+                                          padding: const EdgeInsets.all(12),
+                                          margin: const EdgeInsets.symmetric(
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF2A2A40),
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                          ),
+                                          child: Text(
+                                            request,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.delete,
+                                          color: Colors.redAccent,
+                                        ),
+                                        onPressed: () async {
+                                          final confirm =
+                                              await showDialog<bool>(
+                                            context: context,
+                                            builder: (ctx) => AlertDialog(
+                                              backgroundColor:
+                                                  const Color(0xFF2E2E3E),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(
+                                                  12,
+                                                ),
+                                              ),
+                                              title: const Text(
+                                                "Delete Chat",
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                              content: const Text(
+                                                "Are you sure you want to delete this chat?",
+                                                style: TextStyle(
+                                                  color: Colors.white70,
+                                                ),
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.of(
+                                                    ctx,
+                                                  ).pop(false),
+                                                  child: const Text(
+                                                    "Cancel",
+                                                    style: TextStyle(
+                                                      color: Colors.grey,
+                                                    ),
+                                                  ),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () => Navigator.of(
+                                                    ctx,
+                                                  ).pop(true),
+                                                  child: const Text(
+                                                    "Delete",
+                                                    style: TextStyle(
+                                                      color: Colors.redAccent,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+
+                                          if (confirm == true) {
+                                            final success = await _deleteChat(
+                                              chatId,
+                                            );
+                                            if (success) {
+                                              setState(() {
+                                                validChats.removeAt(index);
+                                              });
+                                              // Navigator.of(context)
+                                              //     .pop(); // Close history dialog
+                                              //_getOwnChat(); // Refresh chat list
+                                            }
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            );
+                          },
+                        ),
                 ),
 
                 const SizedBox(height: 16),
@@ -564,7 +559,6 @@ class _ChatScreenState extends State<ChatScreen> {
                 bottom: 20,
               ),
               actionsPadding: const EdgeInsets.only(bottom: 10, right: 10),
-
               title: const Text(
                 "✨ Select a Prompt",
                 style: TextStyle(
@@ -573,68 +567,64 @@ class _ChatScreenState extends State<ChatScreen> {
                   color: Colors.white,
                 ),
               ),
-
               content: Container(
                 width: double.maxFinite,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: SizedBox(
                   height: 300,
-                  child:
-                      prompts.isEmpty
-                          ? const Center(
-                            child: Text(
-                              "No prompts available.",
-                              style: TextStyle(color: Colors.white54),
-                            ),
-                          )
-                          : Scrollbar(
-                            thumbVisibility: true,
-                            child: ListView.separated(
-                              itemCount: prompts.length,
-                              separatorBuilder:
-                                  (_, __) => const SizedBox(height: 8),
-                              itemBuilder: (context, index) {
-                                final prompt = prompts[index];
-                                final String name =
-                                    prompt['name'] ?? 'Untitled';
-                                final String id = prompt['id'].toString();
+                  child: prompts.isEmpty
+                      ? const Center(
+                          child: Text(
+                            "No prompts available.",
+                            style: TextStyle(color: Colors.white54),
+                          ),
+                        )
+                      : Scrollbar(
+                          thumbVisibility: true,
+                          child: ListView.separated(
+                            itemCount: prompts.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 8),
+                            itemBuilder: (context, index) {
+                              final prompt = prompts[index];
+                              final String name = prompt['name'] ?? 'Untitled';
+                              final String id = prompt['id'].toString();
 
-                                return GestureDetector(
-                                  onTap: () {
-                                    debugPrint(
-                                      "🔁 Previous Prompt ID: $_selectedPromptId",
-                                    );
+                              return GestureDetector(
+                                onTap: () {
+                                  debugPrint(
+                                    "🔁 Previous Prompt ID: $_selectedPromptId",
+                                  );
 
-                                    setState(() {
-                                      _messageController.text = name;
-                                      _selectedPromptId = id;
-                                    });
+                                  setState(() {
+                                    _messageController.text = name;
+                                    _selectedPromptId = id;
+                                  });
 
-                                    debugPrint(
-                                      "✅ Selected Prompt ID: $_selectedPromptId",
-                                    );
-                                    Navigator.of(dialogContext).pop();
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF2A2A40),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Text(
-                                      name,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                      ),
+                                  debugPrint(
+                                    "✅ Selected Prompt ID: $_selectedPromptId",
+                                  );
+                                  Navigator.of(dialogContext).pop();
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF2A2A40),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    name,
+                                    style: const TextStyle(
+                                      color: Colors.white,
                                     ),
                                   ),
-                                );
-                              },
-                            ),
+                                ),
+                              );
+                            },
                           ),
+                        ),
                 ),
               ),
-
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(),
@@ -652,14 +642,13 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _showChatsPopup(List<dynamic> chats) {
-    final List<dynamic> validChats =
-        chats
-            .where(
-              (chat) =>
-                  chat['title'] != null &&
-                  chat['title'].toString().trim().isNotEmpty,
-            )
-            .toList();
+    final List<dynamic> validChats = chats
+        .where(
+          (chat) =>
+              chat['title'] != null &&
+              chat['title'].toString().trim().isNotEmpty,
+        )
+        .toList();
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -700,94 +689,88 @@ class _ChatScreenState extends State<ChatScreen> {
                     SizedBox(
                       width: double.maxFinite,
                       height: 300,
-                      child:
-                          validChats.isEmpty
-                              ? const Center(
-                                child: Text(
-                                  "No chats available.",
-                                  style: TextStyle(color: Colors.white54),
-                                ),
-                              )
-                              : StatefulBuilder(
-                                builder: (context, setState) {
-                                  return Scrollbar(
-                                    child: ListView.separated(
-                                      separatorBuilder:
-                                          (_, __) => const Divider(
-                                            color: Colors.white10,
-                                            thickness: 0.5,
-                                          ),
-                                      itemCount: validChats.length,
-                                      itemBuilder: (context, index) {
-                                        final chat = validChats[index];
-                                        slug = chat['slug'];
-                                        return ListTile(
-                                          tileColor: const Color(0xFF2A2A40),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              10,
-                                            ),
-                                          ),
-                                          title:
-                                              (chat['title']
-                                                          ?.toString()
-                                                          .trim()
-                                                          .isEmpty ??
-                                                      true)
-                                                  ? const SizedBox.shrink()
-                                                  : Text(
-                                                    chat['title'],
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                    ),
-                                                  ),
-
-                                          trailing:
-                                              (chat['title']
-                                                          ?.toString()
-                                                          .trim()
-                                                          .isEmpty ??
-                                                      true)
-                                                  ? null
-                                                  : IconButton(
-                                                    icon: const Icon(
-                                                      Icons.delete,
-                                                      color: Colors.redAccent,
-                                                    ),
-                                                    onPressed: () async {
-                                                      bool deleted =
-                                                          await _deleteChat(
-                                                            chat['id'],
-                                                          );
-                                                      if (deleted) {
-                                                        setState(() {
-                                                          validChats.removeAt(
-                                                            index,
-                                                          );
-                                                        });
-                                                      }
-                                                    },
-                                                  ),
-                                          onTap: () {
-                                            Navigator.pop(context);
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder:
-                                                    (context) => ChatScreen(
-                                                      chatId: chat['id'],
-                                                      chatSlug: chat['slug'],
-                                                      prompts: chat["prompts"],
-                                                    ),
-                                              ),
-                                            );
-                                          },
-                                        );
-                                      },
-                                    ),
-                                  );
-                                },
+                      child: validChats.isEmpty
+                          ? const Center(
+                              child: Text(
+                                "No chats available.",
+                                style: TextStyle(color: Colors.white54),
                               ),
+                            )
+                          : StatefulBuilder(
+                              builder: (context, setState) {
+                                return Scrollbar(
+                                  child: ListView.separated(
+                                    separatorBuilder: (_, __) => const Divider(
+                                      color: Colors.white10,
+                                      thickness: 0.5,
+                                    ),
+                                    itemCount: validChats.length,
+                                    itemBuilder: (context, index) {
+                                      final chat = validChats[index];
+                                      slug = chat['slug'];
+                                      return ListTile(
+                                        tileColor: const Color(0xFF2A2A40),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                        title: (chat['title']
+                                                    ?.toString()
+                                                    .trim()
+                                                    .isEmpty ??
+                                                true)
+                                            ? const SizedBox.shrink()
+                                            : Text(
+                                                chat['title'],
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                        trailing: (chat['title']
+                                                    ?.toString()
+                                                    .trim()
+                                                    .isEmpty ??
+                                                true)
+                                            ? null
+                                            : IconButton(
+                                                icon: const Icon(
+                                                  Icons.delete,
+                                                  color: Colors.redAccent,
+                                                ),
+                                                onPressed: () async {
+                                                  bool deleted =
+                                                      await _deleteChat(
+                                                    chat['id'],
+                                                  );
+                                                  if (deleted) {
+                                                    setState(() {
+                                                      validChats.removeAt(
+                                                        index,
+                                                      );
+                                                    });
+                                                  }
+                                                },
+                                              ),
+                                        onTap: () {
+                                          Navigator.pop(context);
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => ChatScreen(
+                                                chatId: chat['id'],
+                                                chatSlug: chat['slug'],
+                                                prompts: chat["prompts"],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
                     ),
 
                     const SizedBox(height: 16),
@@ -847,11 +830,10 @@ class _ChatScreenState extends State<ChatScreen> {
       _messages[index] = ChatMessage(
         text: newText,
         isUser: true,
-        onEdit:
-            (text) => _editMessage(
-              index,
-              text,
-            ), // Keep the callback for further edits
+        onEdit: (text) => _editMessage(
+          index,
+          text,
+        ), // Keep the callback for further edits
       );
 
       // Remove the next message if it's from the AI (non-user message)
@@ -960,10 +942,9 @@ class _ChatScreenState extends State<ChatScreen> {
           chatId!,
           messageText,
           selectedCategoryId,
-          subCategoryId:
-              _selectedPromptId != null
-                  ? int.tryParse(_selectedPromptId!) ?? 1
-                  : 1,
+          subCategoryId: _selectedPromptId != null
+              ? int.tryParse(_selectedPromptId!) ?? 1
+              : 1,
         );
 
         if (response.statusCode == 201 && mounted) {
@@ -1079,7 +1060,8 @@ class _ChatScreenState extends State<ChatScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: Color(0xFF2A2A40), // Dark background with smooth contrast
+          backgroundColor:
+              Color(0xFF2A2A40), // Dark background with smooth contrast
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16), // Slightly rounded corners
           ),
@@ -1122,7 +1104,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                 selectedCategoryId = int.parse(category.id);
                               });
                               Navigator.pop(context);
-                              _showPromptDetailsPopup(context, category.id, token!, selectedCategoryId);
+                              _showPromptDetailsPopup(context, category.id,
+                                  token!, selectedCategoryId);
                             },
                             child: Padding(
                               padding: const EdgeInsets.symmetric(vertical: 6),
@@ -1142,7 +1125,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 child: Row(
                                   children: [
                                     Icon(
-                                      Icons.category_outlined,
+                                      getCategoryIcon(category.id),
                                       color: Colors.white,
                                     ),
                                     SizedBox(width: 10),
@@ -1183,69 +1166,65 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  void _showPromptDetailsPopup(BuildContext context, String id, String token, int categoryId) {
-    final BuildContext safeContext = context;
-    TextEditingController searchController = TextEditingController();
-    List<String> items = [];
-    List<String> filteredItems = [];
-
-    AuthService authService = AuthService();
-
-    Future<void> fetchData() async {
-      try {
-        final response = await authService.getPromptSubCategories(token, categoryId);
-        if (response.statusCode == 200) {
-          final Map<String, dynamic> responseBody = jsonDecode(response.body);
-
-          if (responseBody.containsKey('data')) {
-            List<dynamic> dataList = responseBody['data'];
-            List<String> fetchedItems = dataList.map((item) => item['name'] as String).toList();
-
-            if (!mounted) return;
-
-            setState(() {
-              items = fetchedItems;
-              filteredItems = List.from(fetchedItems);
-            });
-
-            _showSelectPromptFinder(safeContext, fetchedItems);
-          } else {
-            print('No data found in response');
-          }
-        } else {
-          print('Error fetching data: ${response.statusCode}');
-        }
-      } catch (e) {
-        print('Error: $e');
-      }
-    }
-
-    // Kick off the fetch
-    fetchData();
-
-    // Show search dialog immediately
+  void _showPromptDetailsPopup(
+      BuildContext context, String id, String token, int categoryId) {
     showDialog(
-      context: safeContext,
+      context: context,
       builder: (BuildContext dialogContext) {
+        final TextEditingController searchController = TextEditingController();
+        List<String> items = [];
+        List<String> filteredItems = [];
+        final AuthService authService = AuthService();
+
         return StatefulBuilder(
           builder: (context, setState) {
+            Future.microtask(() async {
+              try {
+                final response =
+                    await authService.getPromptSubCategories(token, categoryId);
+                if (response.statusCode == 200) {
+                  final Map<String, dynamic> responseBody =
+                      jsonDecode(response.body);
+
+                  if (responseBody.containsKey('data')) {
+                    final List<String> fetchedItems =
+                        (responseBody['data'] as List)
+                            .map((item) => item['name'] as String)
+                            .toList();
+
+                    setState(() {
+                      items = fetchedItems;
+                      filteredItems = List.from(fetchedItems);
+                    });
+                  }
+                }
+              } catch (e) {
+                debugPrint('Error fetching prompt details: $e');
+              }
+            });
+
             void filterItems(String query) {
               setState(() {
                 filteredItems = items
-                    .where((item) => item.toLowerCase().contains(query.toLowerCase()))
+                    .where((item) =>
+                        item.toLowerCase().contains(query.toLowerCase()))
                     .toList();
               });
             }
 
             return AlertDialog(
               backgroundColor: const Color(0xFF2A2A40),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               titlePadding: const EdgeInsets.all(20),
               contentPadding: EdgeInsets.zero,
               actionsPadding: const EdgeInsets.only(bottom: 10, right: 10),
               title: Text(
                 "📄 $id",
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white),
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    color: Colors.white),
               ),
               content: Container(
                 width: double.maxFinite,
@@ -1262,12 +1241,25 @@ class _ChatScreenState extends State<ChatScreen> {
                         hintStyle: const TextStyle(color: Colors.white54),
                         filled: true,
                         fillColor: const Color(0xFF2A2A40),
-                        prefixIcon: const Icon(Icons.search, color: Colors.white),
+                        prefixIcon:
+                            const Icon(Icons.search, color: Colors.white),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
+                          borderSide: const BorderSide(
+                              color: Colors.deepPurpleAccent, width: 1.0),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                              color: Colors.white54, width: 1.0),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                              color: Colors.deepPurpleAccent, width: 2.0),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 14),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -1275,23 +1267,27 @@ class _ChatScreenState extends State<ChatScreen> {
                       height: 300,
                       child: filteredItems.isEmpty
                           ? const Center(
-                        child: Text('No results found.', style: TextStyle(color: Colors.white54)),
-                      )
+                              child: Text('Loading...',
+                                  style: TextStyle(color: Colors.white54)),
+                            )
                           : ListView.separated(
-                        itemCount: filteredItems.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (context, index) {
-                          final item = filteredItems[index];
-                          return Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF3A3A52),
-                              borderRadius: BorderRadius.circular(10),
+                              itemCount: filteredItems.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 8),
+                              itemBuilder: (context, index) {
+                                final item = filteredItems[index];
+                                return Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF3A3A52),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(item,
+                                      style:
+                                          const TextStyle(color: Colors.white)),
+                                );
+                              },
                             ),
-                            child: Text(item, style: const TextStyle(color: Colors.white)),
-                          );
-                        },
-                      ),
                     ),
                   ],
                 ),
@@ -1299,7 +1295,8 @@ class _ChatScreenState extends State<ChatScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(),
-                  style: TextButton.styleFrom(foregroundColor: Colors.deepPurpleAccent),
+                  style: TextButton.styleFrom(
+                      foregroundColor: Colors.deepPurpleAccent),
                   child: const Text("Close"),
                 ),
               ],
@@ -1310,98 +1307,85 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-
-  void _showSelectPromptFinder(BuildContext context, List<String> prompts) async {
-    final BuildContext safeContext = context;
-
-    await Future.delayed(Duration.zero);
-
-    if (!mounted) return;
-
-    await showDialog(
-      context: safeContext,
-      builder: (BuildContext dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              backgroundColor: const Color(0xFF1E1E2E),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              titlePadding: const EdgeInsets.all(20),
-              contentPadding: EdgeInsets.zero,
-              actionsPadding: const EdgeInsets.only(bottom: 10, right: 10),
-              title: const Text(
-                "✨ Select a Prompt",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white),
-              ),
-              content: Container(
-                width: double.maxFinite,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: SizedBox(
-                  height: 300,
-                  child: prompts.isEmpty
-                      ? const Center(
-                    child: Text("No prompts available.", style: TextStyle(color: Colors.white54)),
-                  )
-                      : Scrollbar(
-                    thumbVisibility: true,
-                    child: ListView.separated(
-                      itemCount: prompts.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
-                      itemBuilder: (context, index) {
-                        final prompt = prompts[index];
-                        return GestureDetector(
-                          onTap: () {
-                            debugPrint("🔁 Previous Prompt ID: $_selectedPromptId");
-
-                            setState(() {
-                              _messageController.text = prompt;
-                              _selectedPromptId = prompt;
-                            });
-
-                            debugPrint("✅ Selected Prompt: $_selectedPromptId");
-                            Navigator.of(dialogContext).pop();
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF2A2A40),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(prompt, style: const TextStyle(color: Colors.white)),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  style: TextButton.styleFrom(foregroundColor: Colors.deepPurpleAccent),
-                  child: const Text("Close"),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
+  // Future<void> showSelectPromptFinder(BuildContext context, List<String> prompts) async {
+  //   await showDialog(
+  //     context: context,
+  //     builder: (BuildContext dialogContext) {
+  //       return AlertDialog(
+  //         backgroundColor: const Color(0xFF1E1E2E),
+  //         shape:
+  //             RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+  //         titlePadding: const EdgeInsets.all(20),
+  //         contentPadding: EdgeInsets.zero,
+  //         actionsPadding: const EdgeInsets.only(bottom: 10, right: 10),
+  //         title: const Text(
+  //           "✨ Select a Prompt",
+  //           style: TextStyle(
+  //               fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white),
+  //         ),
+  //         content: Container(
+  //           width: double.maxFinite,
+  //           padding: const EdgeInsets.symmetric(horizontal: 16),
+  //           child: SizedBox(
+  //             height: 300,
+  //             child: prompts.isEmpty
+  //                 ? const Center(
+  //                     child: Text("No prompts available.",
+  //                         style: TextStyle(color: Colors.white54)),
+  //                   )
+  //                 : Scrollbar(
+  //                     child: ListView.separated(
+  //                       itemCount: prompts.length,
+  //                       separatorBuilder: (_, __) => const SizedBox(height: 8),
+  //                       itemBuilder: (context, index) {
+  //                         final prompt = prompts[index];
+  //                         return GestureDetector(
+  //                           onTap: () {
+  //                             _messageController.text = prompt;
+  //                             _selectedPromptId = prompt;
+  //                             Navigator.of(dialogContext).pop();
+  //                           },
+  //                           child: Container(
+  //                             padding: const EdgeInsets.all(12),
+  //                             decoration: BoxDecoration(
+  //                               color: const Color(0xFF2A2A40),
+  //                               borderRadius: BorderRadius.circular(10),
+  //                             ),
+  //                             child: Text(prompt,
+  //                                 style: const TextStyle(color: Colors.white)),
+  //                           ),
+  //                         );
+  //                       },
+  //                     ),
+  //                   ),
+  //           ),
+  //         ),
+  //         actions: [
+  //           TextButton(
+  //             onPressed: () => Navigator.of(dialogContext).pop(),
+  //             style: TextButton.styleFrom(
+  //                 foregroundColor: Colors.deepPurpleAccent),
+  //             child: const Text("Close"),
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
 
   Widget promptSearchPopup(
-      BuildContext context,
-      List<PromptCategory> allCategories,
-      ) {
+      BuildContext context, List<PromptCategory> allCategories) {
     return StatefulBuilder(
       builder: (context, setState) {
-        TextEditingController searchController = TextEditingController();
-        List<String> filteredPrompts = allCategories.map((c) => c.name).toList();
+        final TextEditingController searchController = TextEditingController();
+        List<String> filteredPrompts =
+            allCategories.map((c) => c.name).toList();
 
         void filterPrompts(String query) {
           setState(() {
             filteredPrompts = allCategories
-                .where((c) => c.name.toLowerCase().contains(query.toLowerCase()))
+                .where(
+                    (c) => c.name.toLowerCase().contains(query.toLowerCase()))
                 .map((c) => c.name)
                 .toList();
           });
@@ -1409,16 +1393,16 @@ class _ChatScreenState extends State<ChatScreen> {
 
         return AlertDialog(
           backgroundColor: const Color(0xFF1E1E2E),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           titlePadding: const EdgeInsets.all(20),
           contentPadding: EdgeInsets.zero,
           actionsPadding: const EdgeInsets.only(bottom: 10, right: 10),
-
           title: const Text(
             "🔍 Search Prompt",
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white),
+            style: TextStyle(
+                fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white),
           ),
-
           content: Container(
             width: double.maxFinite,
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1447,41 +1431,45 @@ class _ChatScreenState extends State<ChatScreen> {
                   height: 300,
                   child: filteredPrompts.isEmpty
                       ? const Center(
-                    child: Text('No matching prompts found.', style: TextStyle(color: Colors.white54)),
-                  )
+                          child: Text('No matching prompts found.',
+                              style: TextStyle(color: Colors.white54)),
+                        )
                       : Scrollbar(
-                    thumbVisibility: true,
-                    child: ListView.separated(
-                      itemCount: filteredPrompts.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
-                      itemBuilder: (context, index) {
-                        final prompt = filteredPrompts[index];
-                        return GestureDetector(
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            _showPromptDetailsPopup(context, prompt, token!, selectedCategoryId);
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF2A2A40),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(prompt, style: const TextStyle(color: Colors.white)),
+                          child: ListView.separated(
+                            itemCount: filteredPrompts.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 8),
+                            itemBuilder: (context, index) {
+                              final prompt = filteredPrompts[index];
+                              return GestureDetector(
+                                onTap: () {
+                                  Navigator.of(context).pop();
+                                  _showPromptDetailsPopup(context, prompt,
+                                      token!, selectedCategoryId);
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF2A2A40),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(prompt,
+                                      style:
+                                          const TextStyle(color: Colors.white)),
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      },
-                    ),
-                  ),
+                        ),
                 ),
               ],
             ),
           ),
-
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              style: TextButton.styleFrom(foregroundColor: Colors.deepPurpleAccent),
+              style: TextButton.styleFrom(
+                  foregroundColor: Colors.deepPurpleAccent),
               child: const Text("Close"),
             ),
           ],
@@ -1489,8 +1477,6 @@ class _ChatScreenState extends State<ChatScreen> {
       },
     );
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -1532,21 +1518,20 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           actions: [
             Builder(
-              builder:
-                  (context) => GestureDetector(
-                    onTap: () {
-                      Scaffold.of(context).openEndDrawer();
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Image.asset(
-                        'assets/image/Drawer.png',
-                        height: 28,
-                        width: 28,
-                        color: Colors.white,
-                      ),
-                    ),
+              builder: (context) => GestureDetector(
+                onTap: () {
+                  Scaffold.of(context).openEndDrawer();
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Image.asset(
+                    'assets/image/Drawer.png',
+                    height: 28,
+                    width: 28,
+                    color: Colors.white,
                   ),
+                ),
+              ),
             ),
           ],
         ),
@@ -1579,13 +1564,11 @@ class _ChatScreenState extends State<ChatScreen> {
                           CircleAvatar(
                             radius: 18,
                             backgroundColor: Colors.white38,
-                            backgroundImage:
-                                userProfile != null
-                                    ? NetworkImage(userProfile!)
-                                    : AssetImage('assets/image/person.png')
-                                        as ImageProvider,
+                            backgroundImage: userProfile != null
+                                ? NetworkImage(userProfile!)
+                                : AssetImage('assets/image/person.png')
+                                    as ImageProvider,
                           ),
-
                           const SizedBox(width: 6),
                           Text(
                             userName ?? "No Name",
@@ -1599,7 +1582,6 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   ),
                 ),
-
                 ListTile(
                   title: const Text(
                     'New Chats',
@@ -1619,12 +1601,11 @@ class _ChatScreenState extends State<ChatScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder:
-                                  (context) => ChatScreen(
-                                    chatId: chatId,
-                                    chatSlug: slug,
-                                    prompts: [],
-                                  ),
+                              builder: (context) => ChatScreen(
+                                chatId: chatId,
+                                chatSlug: slug,
+                                prompts: [],
+                              ),
                             ),
                           );
                         } else {
@@ -1701,7 +1682,6 @@ class _ChatScreenState extends State<ChatScreen> {
                     // }
                   },
                 ),
-
                 ListTile(
                   title: Text(
                     'About Us',
@@ -1729,7 +1709,6 @@ class _ChatScreenState extends State<ChatScreen> {
                     launchExternalUrl('https://figpromptfinder.com/privacy');
                   },
                 ),
-
                 const Divider(color: Colors.white38, endIndent: 15, indent: 15),
                 ListTile(
                   title: const Text(
@@ -1768,8 +1747,10 @@ class _ChatScreenState extends State<ChatScreen> {
                     width: 170,
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
-                        value: ['prompt_finder', ...defaultCategories.map((c) => c.id.toString())]
-                            .contains(selectedCategoryId.toString())
+                        value: [
+                          'prompt_finder',
+                          ...defaultCategories.map((c) => c.id.toString())
+                        ].contains(selectedCategoryId.toString())
                             ? selectedCategoryId.toString()
                             : null,
                         icon: const Icon(
@@ -1798,7 +1779,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             child: Text('Prompt Finder'),
                           ),
                           ...defaultCategories.map<DropdownMenuItem<String>>(
-                                (PromptCategory category) {
+                            (PromptCategory category) {
                               return DropdownMenuItem<String>(
                                 value: category.id.toString(),
                                 child: Text(category.name),
@@ -1876,6 +1857,21 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                       const SizedBox(width: 8),
                       GestureDetector(
+                        onTapDown: (_) {
+                          setState(() {
+                            _scale = 0.9;
+                          });
+                        },
+                        onTapUp: (_) {
+                          setState(() {
+                            _scale = 1.0;
+                          });
+                        },
+                        onTapCancel: () {
+                          setState(() {
+                            _scale = 1.0;
+                          });
+                        },
                         onTap: () async {
                           if (_isCreatingChat) return;
 
@@ -1890,43 +1886,79 @@ class _ChatScreenState extends State<ChatScreen> {
                               final slug = result['slug'];
 
                               if (chatId != null) {
+                                if (!mounted) return;
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) => ChatScreen(
-                                          chatId: chatId,
-                                          chatSlug: slug,
-                                          prompts: [],
+                                  PageRouteBuilder(
+                                    transitionDuration:
+                                        const Duration(milliseconds: 0),
+                                    pageBuilder: (context, animation,
+                                        secondaryAnimation) {
+                                      return FadeTransition(
+                                        opacity: animation,
+                                        child: SlideTransition(
+                                          position: Tween<Offset>(
+                                            begin: const Offset(0, 0),
+                                            end: Offset.zero,
+                                          ).animate(CurvedAnimation(
+                                            parent: animation,
+                                            curve: Curves.linear,
+                                          )),
+                                          child: ChatScreen(
+                                            chatId: chatId,
+                                            chatSlug: slug,
+                                            prompts: [],
+                                          ),
                                         ),
+                                      );
+                                    },
                                   ),
                                 );
                               } else {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content:
+                                          Text("Failed to create new chat"),
+                                    ),
+                                  );
+                                }
+                              }
+                            } else {
+                              if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text("Failed to create new chat"),
                                   ),
                                 );
                               }
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("Failed to create new chat"),
-                                ),
-                              );
                             }
                           } finally {
-                            setState(() {
-                              _isCreatingChat = false;
-                            });
+                            if (mounted) {
+                              setState(() {
+                                _isCreatingChat = false;
+                              });
+                            }
                           }
                         },
-                        child: Image.asset(
-                          'assets/image/Edit.png',
-                          height: 25,
-                          width: 25,
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 1.0, end: _scale),
+                          duration: const Duration(milliseconds: 150),
+                          curve: Curves.easeInOut,
+                          builder: (context, value, child) {
+                            return Transform.scale(
+                              scale: value,
+                              child: child,
+                            );
+                          },
+                          child: SvgPicture.asset(
+                            'assets/image/new-chat.svg',
+                            height: 25,
+                            width: 25,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
+                      )
                     ],
                   ),
                 ],
@@ -1960,8 +1992,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                     height: 60,
                                   ),
                                   SizedBox(
-                                    height:
-                                        MediaQuery.of(context).size.height *
+                                    height: MediaQuery.of(context).size.height *
                                         0.00625,
                                   ),
                                   RichText(
@@ -1978,31 +2009,28 @@ class _ChatScreenState extends State<ChatScreen> {
                                           style: GoogleFonts.poppins(
                                             fontSize: 25,
                                             fontWeight: FontWeight.bold,
-                                            foreground:
-                                                Paint()
-                                                  ..shader =
-                                                      const LinearGradient(
-                                                        colors: [
-                                                          Color(0xFFF2E9D8),
-                                                          Color(0xFFD0A197),
-                                                          Color(0xFFC2797A),
-                                                        ],
-                                                      ).createShader(
-                                                        const Rect.fromLTWH(
-                                                          0,
-                                                          0,
-                                                          100,
-                                                          40,
-                                                        ),
-                                                      ),
+                                            foreground: Paint()
+                                              ..shader = const LinearGradient(
+                                                colors: [
+                                                  Color(0xFFF2E9D8),
+                                                  Color(0xFFD0A197),
+                                                  Color(0xFFC2797A),
+                                                ],
+                                              ).createShader(
+                                                const Rect.fromLTWH(
+                                                  0,
+                                                  0,
+                                                  100,
+                                                  40,
+                                                ),
+                                              ),
                                           ),
                                         ),
                                       ],
                                     ),
                                   ),
                                   SizedBox(
-                                    height:
-                                        MediaQuery.of(context).size.height *
+                                    height: MediaQuery.of(context).size.height *
                                         0.00625,
                                   ),
                                   Text(
@@ -2013,7 +2041,10 @@ class _ChatScreenState extends State<ChatScreen> {
                                       color: Colors.white60,
                                     ),
                                   ),
-                                  const SizedBox(height: 5),
+                                  SizedBox(
+                                    height: MediaQuery.of(context).size.height *
+                                        0.025,
+                                  ),
                                   Text(
                                     'Welcome, New Chat',
                                     textAlign: TextAlign.center,
@@ -2028,7 +2059,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             ),
                             SizedBox(
                               height:
-                                  MediaQuery.of(context).size.height * 0.00625,
+                                  MediaQuery.of(context).size.height * 0.025,
                             ),
                             FeatureCard(
                               imagePath: 'assets/image/Accurate Data.png',
@@ -2065,7 +2096,6 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
               ),
-
               SizedBox(height: MediaQuery.of(context).size.height * 0.00625),
               Container(
                 decoration: BoxDecoration(
@@ -2098,16 +2128,15 @@ class _ChatScreenState extends State<ChatScreen> {
                                       width: 100,
                                       child: ClipRRect(
                                         borderRadius: BorderRadius.circular(8),
-                                        child:
-                                            _selectedImageBytes != null
-                                                ? Image.memory(
-                                                  _selectedImageBytes!,
-                                                  fit: BoxFit.cover,
-                                                )
-                                                : Image.file(
-                                                  _selectedImageFile!,
-                                                  fit: BoxFit.cover,
-                                                ),
+                                        child: _selectedImageBytes != null
+                                            ? Image.memory(
+                                                _selectedImageBytes!,
+                                                fit: BoxFit.cover,
+                                              )
+                                            : Image.file(
+                                                _selectedImageFile!,
+                                                fit: BoxFit.cover,
+                                              ),
                                       ),
                                     ),
                                     Positioned(
@@ -2140,7 +2169,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
                             // TextField inside fixed-height container with scroll
                             Container(
-                              height: 100, // fixed height
+                              height: 70, // fixed height
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,
                               ),

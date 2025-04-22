@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'firebase_options.dart';
-import 'package:fig_ai/Pages/Splace_Screen.dart';
+
+import 'Pages/Splace_Screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home:  Splace_screen(),
+      home: Splace_screen(),
     );
   }
 }
