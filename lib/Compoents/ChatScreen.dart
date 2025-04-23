@@ -10,6 +10,7 @@ import 'package:fig_ai/Models/PromptCategory.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:keyboard_visibility_pro/keyboard_visibility_pro.dart';
@@ -1459,6 +1460,107 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  Future<void> _deleteAccount() async {
+    if (token == null || token!.isEmpty) {
+      print("Token is null or empty while trying to delete the account!");
+      return;
+    }
+
+    try {
+      final response = await authservice.deleteAccount(token!);
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        print("Account deleted successfully.");
+
+        SharedPreferences pref = await SharedPreferences.getInstance();
+        await pref.remove("access_token");
+
+        Navigator.push(context, MaterialPageRoute(builder: (context) => Log_In()));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to Account Delete'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        print("Failed to Account Delete");
+      }
+    } catch (e) {
+      print("Error while deleting account: $e");
+    }
+  }
+
+  Future<void> _showDeleteConfirmationDialog(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.grey[900], // Dark background
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.0),
+          ),
+          elevation: 4.0,
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Confirm Account Deletion',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Are you sure you want to delete your account? '
+                      'This action is irreversible and all your data will be permanently lost.',
+                  style: TextStyle(color: Colors.grey[300]),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.grey[300],
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                      ),
+                      child: const Text('CANCEL'),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.red[700],
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                      ),
+                      child: const Text('DELETE'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (confirmed ?? false) {
+      await _deleteAccount();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1518,198 +1620,241 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ],
         ),
-        endDrawer: Padding(
-          padding: const EdgeInsets.only(top: 75, bottom: 300),
-          child: Drawer(
-            backgroundColor: Colors.black,
-            child: ListView(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: Container(
-                    height: 60,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Color(0xFFF2E9D8),
-                          Color(0xFFD0A197),
-                          Color(0xFFC2797A),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 8.0),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 18,
-                            backgroundColor: Colors.white38,
-                            backgroundImage:
-                                userProfile != null
-                                    ? NetworkImage(userProfile!)
-                                    : AssetImage('assets/image/person.png')
-                                        as ImageProvider,
-                          ),
+        endDrawer: Builder(
+            builder: (context) {
+              final mediaHeight = MediaQuery.of(context).size.height;
+              final mediaWeight = MediaQuery.of(context).size.width;
 
-                          const SizedBox(width: 6),
-                          Text(
-                            userName ?? "No Name",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w400,
+              return Padding(
+                padding: EdgeInsets.only(top: mediaHeight * 0.08, bottom: mediaHeight * 0.28),
+                child: Drawer(
+                  backgroundColor: Colors.black,
+                  child: ListView(
+                    primary: false,
+                    shrinkWrap: true,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: Container(
+                          height: 60,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Color(0xFFF2E9D8),
+                                Color(0xFFD0A197),
+                                Color(0xFFC2797A),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 8.0),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: Colors.white38,
+                                  backgroundImage:
+                                  userProfile != null
+                                      ? NetworkImage(userProfile!)
+                                      : AssetImage('assets/image/person.png')
+                                  as ImageProvider,
+                                ),
 
-                ListTile(
-                  title: const Text(
-                    'New Chats',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  onTap: () async {
-                    if (isLoadingnewchat) return;
-
-                    setState(() => isLoadingnewchat = true);
-                    try {
-                      final result = await _createNewChatSession();
-                      if (result != null) {
-                        final chatId = result['id'];
-                        final slug = result['slug'];
-
-                        if (chatId != null) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (context) => ChatScreen(
-                                    chatId: chatId,
-                                    chatSlug: slug,
-                                    prompts: [],
+                                const SizedBox(width: 6),
+                                Text(
+                                  userName ?? "No Name",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w400,
                                   ),
+                                ),
+                              ],
                             ),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Failed to create new chat"),
-                            ),
-                          );
-                        }
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Failed to create new chat"),
                           ),
-                        );
-                      }
-                    } catch (e) {
-                      print("Error creating new chat: $e");
-                    } finally {
-                      setState(() => isLoadingnewchat = false);
-                    }
-                    ;
-                  },
-                ),
-                ListTile(
-                  title: const Text(
-                    'Own Chats',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  onTap: () {
-                    _getOwnChat();
-                  },
-                ),
-                ListTile(
-                  title: const Text(
-                    'History',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  onTap: () async {
-                    if (isLoadingHistory) return;
+                        ),
+                      ),
 
-                    setState(() => isLoadingHistory = true);
+                      ListTile(
+                        title: const Text(
+                          'New Chats',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        onTap: () async {
+                          if (isLoadingnewchat) return;
 
-                    try {
-                      AuthService auth = AuthService();
-                      final response = await auth.getAllChats(token!);
-                      if (response.statusCode == 200) {
-                        final Map<String, dynamic> data = jsonDecode(
-                          response.body,
-                        );
-                        final List<dynamic> chats = data['chats'];
-                        await _showHistory(context, chats);
-                      } else {
-                        print("Failed to fetch chats: ${response.body}");
-                      }
-                    } catch (e) {
-                      print("Error fetching chats: $e");
-                    } finally {
-                      setState(() => isLoadingHistory = false);
-                    }
-                  },
-                ),
+                          setState(() => isLoadingnewchat = true);
+                          try {
+                            final result = await _createNewChatSession();
+                            if (result != null) {
+                              final chatId = result['id'];
+                              final slug = result['slug'];
 
-                ListTile(
-                  title: Text(
-                    'About Us',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  onTap: () async {
-                    launchExternalUrl('https://figpromptfinder.com/about');
-                  },
-                ),
-                ListTile(
-                  title: const Text(
-                    'Terms & Conditions',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  onTap: () async {
-                    launchExternalUrl('https://figpromptfinder.com/terms');
-                  },
-                ),
-                ListTile(
-                  title: const Text(
-                    'Privacy Policy',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  onTap: () async {
-                    launchExternalUrl('https://figpromptfinder.com/privacy');
-                  },
-                ),
+                              if (chatId != null) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => ChatScreen(
+                                      chatId: chatId,
+                                      chatSlug: slug,
+                                      prompts: [],
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Failed to create new chat"),
+                                  ),
+                                );
+                              }
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Failed to create new chat"),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            print("Error creating new chat: $e");
+                          } finally {
+                            setState(() => isLoadingnewchat = false);
+                          }
+                          ;
+                        },
+                      ),
+                      ListTile(
+                        title: const Text(
+                          'Own Chats',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        onTap: () {
+                          _getOwnChat();
+                        },
+                      ),
+                      ListTile(
+                        title: const Text(
+                          'History',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        onTap: () async {
+                          if (isLoadingHistory) return;
 
-                const Divider(color: Colors.white38, endIndent: 15, indent: 15),
-                ListTile(
-                  title: const Text(
-                    'Log Out',
-                    style: TextStyle(color: Colors.red),
+                          setState(() => isLoadingHistory = true);
+
+                          try {
+                            AuthService auth = AuthService();
+                            final response = await auth.getAllChats(token!);
+                            if (response.statusCode == 200) {
+                              final Map<String, dynamic> data = jsonDecode(
+                                response.body,
+                              );
+                              final List<dynamic> chats = data['chats'];
+                              await _showHistory(context, chats);
+                            } else {
+                              print("Failed to fetch chats: ${response.body}");
+                            }
+                          } catch (e) {
+                            print("Error fetching chats: $e");
+                          } finally {
+                            setState(() => isLoadingHistory = false);
+                          }
+                          // try {
+                          //   AuthService auth = AuthService();
+                          //   final response = await auth.getAllChats(token!);
+                          //   if (response.statusCode == 200) {
+                          //     final Map<String, dynamic> data =
+                          //         jsonDecode(response.body);
+                          //     final List<dynamic> chats = data['chats'];
+                          //     await _showHistory(context, chats);
+                          //   } else {
+                          //     print("Failed to fetch chats: ${response.body}");
+                          //   }
+                          // } catch (e) {
+                          //   print("Error fetching chats: $e");
+                          // }
+                        },
+                      ),
+
+                      ListTile(
+                        title: const Text(
+                          'Privacy Policy',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        onTap: () async {
+                          launchExternalUrl('https://figpromptfinder.com/privacy');
+                          // final Uri url =
+                          //     Uri.parse('https://figpromptfinder.com/privacy');
+                          // if (await canLaunchUrl(url)) {
+                          //   await launchUrl(url,
+                          //       mode: LaunchMode.externalApplication);
+                          // } else {
+                          //   throw 'Could not launch $url';
+                          // }
+                        },
+                      ),
+                      ListTile(
+                        title: const Text(
+                          'Terms & Conditions',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        onTap: () async {
+                          launchExternalUrl('https://figpromptfinder.com/terms');
+                        },
+                      ),
+                      ListTile(
+                        title: const Text(
+                          'Privacy Policy',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        onTap: () async {
+                          launchExternalUrl('https://figpromptfinder.com/privacy');
+                        },
+                      ),
+
+                      ListTile(
+                        title: const Text(
+                          'Delete Account',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        onTap: () async {
+                          _showDeleteConfirmationDialog(context);
+                        },
+                      ),
+
+                      const Divider(color: Colors.white38, endIndent: 15, indent: 15),
+                      ListTile(
+                        title: const Text(
+                          'Log Out',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                        onTap: () async {
+                          try {
+                            await _googleSignIn.signOut();
+
+                            final pref = await SharedPreferences.getInstance();
+                            await pref.remove("access_token");
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text("Logout Successfully!")),
+                            );
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => Log_In()),
+                            );
+                          } catch (error) {
+                            print('Logout failed: $error');
+                          }
+                        },
+                      ),
+                    ],
                   ),
-                  onTap: () async {
-                    try {
-                      await _googleSignIn.signOut();
-                      final pref = await SharedPreferences.getInstance();
-                      await pref.remove("access_token");
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Logout Successfully!")),
-                      );
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => Log_In()),
-                      );
-                    } catch (error) {
-                      print('Logout failed: $error');
-                    }
-                  },
                 ),
-              ],
-            ),
-          ),
+              );
+            }
         ),
         body: Padding(
           padding: const EdgeInsets.all(12.0),
@@ -1784,8 +1929,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           style: TextStyle(fontSize: 14, color: Colors.white),
                         ),
                       ),
-                      const SizedBox(width: 8),
-
+                      const SizedBox(width: 20),
                       GestureDetector(
                         onTapDown: (_) {
                           setState(() {
@@ -1819,12 +1963,29 @@ class _ChatScreenState extends State<ChatScreen> {
                                 if (!mounted) return;
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(
-                                    builder: (context) => ChatScreen(
-                                      chatId: chatId,
-                                      chatSlug: slug,
-                                      prompts: [],
-                                    ),
+                                  PageRouteBuilder(
+                                    transitionDuration:
+                                    const Duration(milliseconds: 0),
+                                    pageBuilder: (context, animation,
+                                        secondaryAnimation) {
+                                      return FadeTransition(
+                                        opacity: animation,
+                                        child: SlideTransition(
+                                          position: Tween<Offset>(
+                                            begin: const Offset(0, 0),
+                                            end: Offset.zero,
+                                          ).animate(CurvedAnimation(
+                                            parent: animation,
+                                            curve: Curves.linear,
+                                          )),
+                                          child: ChatScreen(
+                                            chatId: chatId,
+                                            chatSlug: slug,
+                                            prompts: [],
+                                          ),
+                                        ),
+                                      );
+                                    },
                                   ),
                                 );
                               } else {
@@ -1854,19 +2015,25 @@ class _ChatScreenState extends State<ChatScreen> {
                             }
                           }
                         },
-                        child: AnimatedScale(
-                          scale: _scale,
-                          duration: const Duration(milliseconds: 180),
-                          curve: Curves.easeInOutCubicEmphasized,
-                          child: Image.asset(
-                            'assets/image/new-chat.png',
-                            height: 30,
-                            width: 30,
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 1.0, end: _scale),
+                          duration: const Duration(milliseconds: 150),
+                          curve: Curves.easeInOut,
+                          builder: (context, value, child) {
+                            return Transform.scale(
+                              scale: value,
+                              child: child,
+                            );
+                          },
+                          child: SvgPicture.asset(
+                            'assets/image/new-chat.svg',
+                            height: 35,
+                            width: 35,
                             color: Colors.white,
                           ),
                         ),
-                      )
-
+                      ),
+                      const SizedBox(width: 10),
                     ],
                   ),
                 ],
@@ -1953,7 +2120,10 @@ class _ChatScreenState extends State<ChatScreen> {
                                       color: Colors.white60,
                                     ),
                                   ),
-                                  const SizedBox(height: 5),
+                                  SizedBox(
+                                    height: MediaQuery.of(context).size.height *
+                                        0.025,
+                                  ),
                                   Text(
                                     'Welcome, New Chat',
                                     textAlign: TextAlign.center,
@@ -1968,7 +2138,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             ),
                             SizedBox(
                               height:
-                                  MediaQuery.of(context).size.height * 0.00625,
+                              MediaQuery.of(context).size.height * 0.025,
                             ),
                             FeatureCard(
                               imagePath: 'assets/image/Accurate Data.png',

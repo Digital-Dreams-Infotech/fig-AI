@@ -8,7 +8,8 @@ class AuthService {
       "https://api.figpromptfinder.com/aichat/subcategories";
   final String PromptSub_Category_baseUrl =
       "https://api.figpromptfinder.com/aichat/prompt/subcategories";
-  final String Get_Category = "https://api.figpromptfinder.com/aichat/categories/";
+  final String Get_Category =
+      "https://api.figpromptfinder.com/aichat/categories/";
   final String Prompt_baseUrl =
       "https://api.figpromptfinder.com/aichat/prompts/";
   final String Get_celery_response =
@@ -133,8 +134,6 @@ class AuthService {
     return await http.get(url);
   }
 
-
-
   Future<http.Response> updateCategory(
     String token,
     int categoryId,
@@ -195,12 +194,14 @@ class AuthService {
     int start = 0,
     int limit = 10,
   }) async {
-    final url = Uri.parse(PromptSub_Category_baseUrl).replace(queryParameters: {
-      'prompt_category': categoryId.toString(),
-      'search': searchQuery,
-      'start': start.toString(),
-      'limit': limit.toString(),
-    });
+    final url = Uri.parse(PromptSub_Category_baseUrl).replace(
+      queryParameters: {
+        'prompt_category': categoryId.toString(),
+        'search': searchQuery,
+        'start': start.toString(),
+        'limit': limit.toString(),
+      },
+    );
 
     final response = await http.get(
       url,
@@ -212,7 +213,6 @@ class AuthService {
 
     return response;
   }
-
 
   Future<http.Response> updateSubCategory(
     String token,
@@ -278,7 +278,13 @@ class AuthService {
     );
   }
 
-  Future<http.Response> createPrompt(String token,int chatId,String requestText,int categoryId,{int? subCategoryId}) async {
+  Future<http.Response> createPrompt(
+    String token,
+    int chatId,
+    String requestText,
+    int categoryId, {
+    int? subCategoryId,
+  }) async {
     final url = Uri.parse(Prompt_baseUrl);
     var request = http.MultipartRequest("POST", url);
     request.headers["Authorization"] = "Bearer $token";
@@ -360,7 +366,11 @@ class AuthService {
   //   return response;
   // }
 
-  Future<http.Response> getPromptCategory(String token, {String? prompt, String? category}) async {
+  Future<http.Response> getPromptCategory(
+    String token, {
+    String? prompt,
+    String? category,
+  }) async {
     final url = Uri.parse(PromptCategory);
     final headers = {"Authorization": "Bearer $token"};
 
@@ -550,9 +560,7 @@ class AuthService {
 
     final res = await http.get(
       url,
-      headers: {
-        'Authorization': 'Bearer $token',
-      },
+      headers: {'Authorization': 'Bearer $token'},
     );
 
     return res;
@@ -563,19 +571,22 @@ class AuthService {
 
     final res = await http.delete(
       url,
-      headers: {
-        'Authorization': 'Bearer $token',
-      },
+      headers: {'Authorization': 'Bearer $token'},
     );
 
     return res;
   }
 
-// ------- XXXXXXXXXXXXXX -----------
+  // ------- XXXXXXXXXXXXXX -----------
 
-// ------------- HISTORY ---------
-  Future<http.Response> getPromptHistoryBySlug(String token, String slug) async {
-    final url = Uri.parse('https://api.figpromptfinder.com/aichat/chats/prompt-history/$slug/');
+  // ------------- HISTORY ---------
+  Future<http.Response> getPromptHistoryBySlug(
+    String token,
+    String slug,
+  ) async {
+    final url = Uri.parse(
+      'https://api.figpromptfinder.com/aichat/chats/prompt-history/$slug/',
+    );
     final headers = {
       "Authorization": "Bearer $token",
       "Content-Type": "application/json", // Optional, but good practice
@@ -583,5 +594,25 @@ class AuthService {
 
     return await http.get(url, headers: headers);
   }
-// -------- XXXXXXXXXXXXXXX __________
+
+  // -------- XXXXXXXXXXXXXXX __________
+
+  // ---------- Delete Account ----------
+  Future<http.Response> deleteAccount(String token) async {
+    final url = Uri.parse("$baseUrl/account-delete/");
+    final header = {
+      "Authorization": "Bearer $token",
+      "Content-Type": "application/json",
+    };
+
+    try {
+      final response = await http.post(url, headers: header);
+      return response;
+    } catch (e) {
+      print("Error while deleting account: $e");
+      rethrow;
+    }
+  }
+
+  // -------- XXXXXXXXXXXXXXX __________
 }
