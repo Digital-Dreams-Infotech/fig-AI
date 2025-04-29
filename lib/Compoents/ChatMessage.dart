@@ -39,7 +39,6 @@ class _ChatMessageState extends State<ChatMessage> {
     _loadLikeDislikeState();
   }
 
-  // Load the like/dislike state from SharedPreferences
   Future<void> _loadLikeDislikeState() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -48,7 +47,6 @@ class _ChatMessageState extends State<ChatMessage> {
     });
   }
 
-  // Save the like/dislike state to SharedPreferences
   Future<void> _saveLikeDislikeState() async {
     final prefs = await SharedPreferences.getInstance();
     prefs.setBool('like_${widget.text}', _isLiked);
@@ -58,7 +56,7 @@ class _ChatMessageState extends State<ChatMessage> {
   void _toggleLike() {
     setState(() {
       _isLiked = !_isLiked;
-      _isDisliked = false;  // Dislike should be reset if like is pressed
+      _isDisliked = false;
     });
     _saveLikeDislikeState();
   }
@@ -66,7 +64,7 @@ class _ChatMessageState extends State<ChatMessage> {
   void _toggleDislike() {
     setState(() {
       _isDisliked = !_isDisliked;
-      _isLiked = false;  // Like should be reset if dislike is pressed
+      _isLiked = false;
     });
     _saveLikeDislikeState();
   }

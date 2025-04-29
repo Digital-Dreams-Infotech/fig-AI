@@ -21,7 +21,7 @@ class _Log_InState extends State<Log_In> {
   final googleSignIn = GoogleSignIn(
     scopes: ['email', 'https://www.googleapis.com/auth/userinfo.profile'],
     clientId:
-        "302333078639-drakidbm8k3ig6282j3b23hln1em3be1.apps.googleusercontent.com",
+    "302333078639-drakidbm8k3ig6282j3b23hln1em3be1.apps.googleusercontent.com",
   );
 
   GoogleSignInAccount? _user;

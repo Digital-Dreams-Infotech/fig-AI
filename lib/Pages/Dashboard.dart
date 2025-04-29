@@ -132,11 +132,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final response = await authservice.deleteAccount(token!);
       if (response.statusCode == 200 || response.statusCode == 204) {
         print("Account deleted successfully.");
-        
-        SharedPreferences pref = await SharedPreferences.getInstance();
+
+        final pref = await SharedPreferences.getInstance();
         await pref.remove("access_token");
 
-        Navigator.push(context, MaterialPageRoute(builder: (context) => Log_In()));
+        await GoogleSignIn().signOut();
+
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => Log_In()),
+              (Route<dynamic> route) => false,
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

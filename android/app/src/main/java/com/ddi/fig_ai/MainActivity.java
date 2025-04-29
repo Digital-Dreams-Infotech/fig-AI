@@ -1,4 +1,4 @@
-package com.example.fig_ai;
+package com.ddi.fig_ai;
 
 import io.flutter.embedding.android.FlutterActivity;
 

@@ -1,5 +1,4 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.fig_ai">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- This is required for launching URLs -->
     <queries>
@@ -25,7 +24,7 @@
             android:value="302333078639-drakidbm8k3ig6282j3b23hln1em3be1.apps.googleusercontent.com" />
 
         <activity
-            android:name=".MainActivity"
+            android:name="com.ddi.fig_ai.MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""

@@ -491,20 +491,33 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _chatBubble(String message, {required bool isSender}) {
+  Widget _chatBubble(String message, {required bool isSender, required VoidCallback onEdit}) {
     return Align(
-      alignment: Alignment.centerLeft,
+      alignment: isSender ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         margin: EdgeInsets.only(bottom: 6),
         decoration: BoxDecoration(
-          color: Colors.indigo[100],
+          color: isSender ? Colors.blue[200] : Colors.indigo[100],
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Text(message, style: TextStyle(fontSize: 16)),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Expanded(
+              child: Text(message, style: TextStyle(fontSize: 16)),
+            ),
+            if (isSender)
+              IconButton(
+                icon: Icon(Icons.edit, size: 18),
+                onPressed: onEdit,
+              ),
+          ],
+        ),
       ),
     );
   }
+
 
   Future<bool> _deleteChat(int chatId) async {
     try {
@@ -857,11 +870,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _messages[index] = ChatMessage(
         text: newText,
         isUser: true,
-        onEdit:
-            (text) => _editMessage(
-              index,
-              text,
-            ), // Keep the callback for further edits
+        onEdit: (updatedText) => _editMessage(index, updatedText),
       );
 
       // Remove the next message if it's from the AI (non-user message)
@@ -934,7 +943,7 @@ class _ChatScreenState extends State<ChatScreen> {
           ChatMessage(
             text: messageText,
             isUser: true,
-            onEdit: (text) => _editMessage(_messages.length - 1, text),
+            onEdit: (updatedText) => _editMessage(_messages.length - 1, updatedText),
           ),
         );
         _messageController.clear();
@@ -971,9 +980,9 @@ class _ChatScreenState extends State<ChatScreen> {
           messageText,
           selectedCategoryId,
           subCategoryId:
-              _selectedPromptId != null
-                  ? int.tryParse(_selectedPromptId!) ?? 1
-                  : 1,
+          _selectedPromptId != null
+              ? int.tryParse(_selectedPromptId!) ?? 1
+              : 1,
         );
 
         if (response.statusCode == 201 && mounted) {
@@ -981,7 +990,6 @@ class _ChatScreenState extends State<ChatScreen> {
           String aiReply = data['ai_response'] ?? "No response from AI.";
 
           setState(() {
-            // Remove the loading message and add the AI response
             _messages.removeLast();
             _messages.add(ChatMessage(text: aiReply, isUser: false));
           });
@@ -1005,6 +1013,7 @@ class _ChatScreenState extends State<ChatScreen> {
       print("Exception in _sendMessage: $e");
     }
   }
+
 
   Future<void> _pickImage(BuildContext context) async {
     try {
@@ -1471,10 +1480,16 @@ class _ChatScreenState extends State<ChatScreen> {
       if (response.statusCode == 200 || response.statusCode == 204) {
         print("Account deleted successfully.");
 
-        SharedPreferences pref = await SharedPreferences.getInstance();
+        final pref = await SharedPreferences.getInstance();
         await pref.remove("access_token");
 
-        Navigator.push(context, MaterialPageRoute(builder: (context) => Log_In()));
+        await GoogleSignIn().signOut();
+
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => Log_In()),
+              (Route<dynamic> route) => false,
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
