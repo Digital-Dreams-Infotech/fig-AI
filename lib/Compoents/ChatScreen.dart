@@ -518,7 +518,6 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-
   Future<bool> _deleteChat(int chatId) async {
     try {
       AuthService auth = AuthService();
@@ -845,75 +844,89 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  void _deleteMessage(int index, int promptId) async {
-    try {
-      final response = await AuthService().deletePropmt(token!, promptId);
-
-      if (response.statusCode == 204 || response.statusCode == 200) {
-        setState(() {
-          _messages.removeAt(index);
-          if (index < _messages.length && !_messages[index].isUser) {
-            _messages.removeAt(index);
-          }
-        });
-      } else {
-        print("Failed to delete prompt: ${response.body}");
-      }
-    } catch (e) {
-      print("Error deleting prompt: $e");
-    }
-  }
-
   void _editMessage(int index, String newText) async {
-    // Update the edited message
     setState(() {
       _messages[index] = ChatMessage(
         text: newText,
         isUser: true,
-        onEdit: (updatedText) => _editMessage(index, updatedText),
+        onEdit: (text) => _editMessage(index, text),
+        onDelete: _messages[index].onDelete, // Preserve the onDelete callback
       );
 
-      // Remove the next message if it's from the AI (non-user message)
+      // Show a loading state in the AI response
       if (index + 1 < _messages.length && !_messages[index + 1].isUser) {
-        _messages.removeAt(index + 1);
+        _messages[index + 1] = ChatMessage(
+          text: "Generating response...",
+          isUser: false,
+        );
       }
     });
 
     try {
-      // Send request to regenerate AI response for the edited prompt
+      // Convert messages to the format your API expects
+      // You might need to modify this based on what your API expects
+      final messagesForApi = _messages.map((msg) => {
+        'text': msg.text,
+        'isUser': msg.isUser,
+      }).toList();
+
       final response = await AuthService().createPrompt(
         token!,
         chatId!,
-        newText,
+        newText, // Pass the properly formatted messages list
         selectedCategoryId,
-        subCategoryId: int.parse(_selectedPromptId!),
+        subCategoryId:
+        _selectedPromptId != null
+            ? int.tryParse(_selectedPromptId!) ?? 1
+            : 1,
       );
 
       if (response.statusCode == 201) {
         Map<String, dynamic> data = jsonDecode(response.body);
         String aiReply = data['ai_response'] ?? "No response from AI.";
 
-        // Insert AI response after the edited message
         Future.delayed(const Duration(seconds: 1), () {
           if (mounted) {
             setState(() {
-              // Insert the AI's response as the next message after the edited one
-              _messages.insert(
-                index + 1,
-                ChatMessage(
+              // Update the existing AI response instead of inserting a new one
+              if (index + 1 < _messages.length && !_messages[index + 1].isUser) {
+                _messages[index + 1] = ChatMessage(
                   text: aiReply,
-                  isUser: false, // AI message
-                  onEdit: null, // AI response shouldn't be editable
-                ),
-              );
+                  isUser: false,
+                );
+              } else {
+                // In case there was no existing AI response
+                _messages.insert(
+                  index + 1,
+                  ChatMessage(text: aiReply, isUser: false),
+                );
+              }
             });
           }
         });
       } else {
         print("❌ Failed to regenerate prompt: ${response.body}");
+        // Update the AI message to show the error
+        if (mounted && index + 1 < _messages.length && !_messages[index + 1].isUser) {
+          setState(() {
+            _messages[index + 1] = ChatMessage(
+              text: "Failed to generate response.",
+              isUser: false,
+            );
+          });
+        }
       }
     } catch (e) {
       print("⚠️ Error while regenerating prompt: $e");
+      // Update the AI message to show the error
+      if (mounted && index + 1 < _messages.length && !_messages[index + 1].isUser) {
+        setState(() {
+          _messages[index + 1] = ChatMessage(
+            text: "Error generating response.",
+            isUser: false,
+          );
+        });
+      }
     }
   }
 
@@ -1011,38 +1024,6 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     } catch (e) {
       print("Exception in _sendMessage: $e");
-    }
-  }
-
-
-  Future<void> _pickImage(BuildContext context) async {
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
-        allowMultiple: false,
-        withData: true,
-      );
-
-      if (result != null && result.files.isNotEmpty) {
-        PlatformFile file = result.files.first;
-        String? filePath = file.path;
-
-        setState(() {
-          if (filePath != null) {
-            _selectedImageFile = File(filePath); // use file path
-          }
-
-          _selectedImageBytes = file.bytes; // this might be null
-        });
-
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Image selected!")));
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
     }
   }
 
@@ -1204,47 +1185,6 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildDialogTitle() {
-    return const Padding(
-      padding: EdgeInsets.only(top: 20, left: 20, right: 20),
-      child: Text(
-        '🔍 Prompt Finder',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDialogContent(BuildContext context) {
-    return Container(
-      width: double.maxFinite,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      child: categories.isEmpty
-          ? const Center(
-        child: Text(
-          'No categories available',
-          style: TextStyle(color: Colors.white70),
-        ),
-      )
-          : SizedBox(
-        height: 350,
-        child: Scrollbar(
-          thumbVisibility: true,
-          child: ListView.builder(
-            itemCount: categories.length,
-            itemBuilder: (context, index) {
-              final category = categories[index];
-              return _buildCategoryItem(context, category);
-            },
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildCategoryItem(BuildContext context, dynamic category) {
     return GestureDetector(
       onTap: () {
@@ -1289,16 +1229,6 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildCloseButton(BuildContext context) {
-    return TextButton(
-      onPressed: () => Navigator.pop(context),
-      child: const Text(
-        'Close',
-        style: TextStyle(color: Colors.deepPurpleAccent),
-      ),
-    );
-  }
-
   void _showPromptDetailsPopup(BuildContext context, String id, String token, int categoryId) {
     showDialog(
       context: context,
@@ -1310,68 +1240,6 @@ class _ChatScreenState extends State<ChatScreen> {
           _messageController.text = selectedPrompt;
         },
       ),
-    );
-  }
-
-
-  Future<void> _showSelectPromptFinder(BuildContext context, List<String> prompts) async {
-    await showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF1E1E2E),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          titlePadding: const EdgeInsets.all(20),
-          contentPadding: EdgeInsets.zero,
-          actionsPadding: const EdgeInsets.only(bottom: 10, right: 10),
-          title: const Text(
-            "✨ Select a Prompt",
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white),
-          ),
-          content: Container(
-            width: double.maxFinite,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SizedBox(
-              height: 300,
-              child: prompts.isEmpty
-                  ? const Center(
-                child: Text("No prompts available.", style: TextStyle(color: Colors.white54)),
-              )
-                  : Scrollbar(
-                child: ListView.separated(
-                  itemCount: prompts.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    final prompt = prompts[index];
-                    return GestureDetector(
-                      onTap: () {
-                        _messageController.text = prompt;
-                        _selectedPromptId = prompt;
-                        Navigator.of(dialogContext).pop();
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF2A2A40),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(prompt, style: const TextStyle(color: Colors.white)),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              style: TextButton.styleFrom(foregroundColor: Colors.deepPurpleAccent),
-              child: const Text("Close"),
-            ),
-          ],
-        );
-      },
     );
   }
 

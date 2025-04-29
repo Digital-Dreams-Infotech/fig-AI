@@ -112,45 +112,42 @@ class _ChatMessageState extends State<ChatMessage> {
 
   @override
   Widget build(BuildContext context) {
+    final isUser = widget.isUser;
+    final hasImage = widget.imagePath != null;
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 7, horizontal: 12),
       child: Column(
-        crossAxisAlignment: widget.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: widget.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (!widget.isUser)
+              if (!isUser)
                 CircleAvatar(
                   backgroundColor: Colors.purple[300],
-                  child: const Icon(
-                    Icons.auto_awesome,
-                    color: Colors.white,
-                    size: 18,
-                  ),
+                  child: const Icon(Icons.auto_awesome, color: Colors.white, size: 18),
                 ),
-              if (!widget.isUser) const SizedBox(width: 10),
+              if (!isUser) const SizedBox(width: 10),
               Flexible(
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: widget.isUser ? Colors.purple[300] : Colors.white10,
+                    color: isUser ? Colors.purple[300] : Colors.white10,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (widget.imagePath != null)
-                        Container(
-                          height: 150,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            image: DecorationImage(
-                              image: FileImage(File(widget.imagePath!)),
-                              fit: BoxFit.cover,
-                            ),
+                      if (hasImage)
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.file(
+                            File(widget.imagePath!),
+                            height: 150,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
                           ),
                         )
                       else
@@ -174,31 +171,15 @@ class _ChatMessageState extends State<ChatMessage> {
             ],
           ),
 
-          // Add copy/share buttons only for received messages
-          if (!widget.isUser)
+          // Controls for assistant messages
+          if (!isUser)
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  IconButton(
-                    icon: const Icon(
-                      Icons.copy,
-                      size: 20,
-                      color: Colors.white60,
-                    ),
-                    tooltip: 'Copy response',
-                    onPressed: _copyToClipboard,
-                  ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.share,
-                      size: 20,
-                      color: Colors.white60,
-                    ),
-                    tooltip: 'Share response',
-                    onPressed: _shareText,
-                  ),
+                  _iconButton(Icons.copy, 'Copy response', _copyToClipboard),
+                  _iconButton(Icons.share, 'Share response', _shareText),
                   IconButton(
                     icon: Icon(
                       _isLiked ? Icons.thumb_up : Icons.thumb_up_alt_outlined,
@@ -220,10 +201,64 @@ class _ChatMessageState extends State<ChatMessage> {
                 ],
               ),
             ),
+
+          // Controls for user messages
+          if (isUser)
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0, right: 4.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  // if (widget.onEdit != null)
+                  //   _iconButton(Icons.edit, 'Edit message', () {
+                  //     final controller = TextEditingController(text: widget.text);
+                  //     showDialog(
+                  //       context: context,
+                  //       builder: (context) => AlertDialog(
+                  //         title: const Text('Edit Message'),
+                  //         content: TextField(
+                  //           controller: controller,
+                  //           maxLines: null,
+                  //           decoration: const InputDecoration(
+                  //             border: OutlineInputBorder(),
+                  //             hintText: 'Edit your message',
+                  //           ),
+                  //         ),
+                  //         actions: [
+                  //           TextButton(
+                  //             onPressed: () => Navigator.pop(context),
+                  //             child: const Text('Cancel'),
+                  //           ),
+                  //           TextButton(
+                  //             onPressed: () {
+                  //               Navigator.pop(context);
+                  //               widget.onEdit?.call(controller.text);
+                  //             },
+                  //             child: const Text('Save'),
+                  //           ),
+                  //         ],
+                  //       ),
+                  //     );
+                  //   }),
+                  if (widget.onDelete != null)
+                    _iconButton(Icons.delete_outline, 'Delete message', widget.onDelete!),
+                ],
+              ),
+            ),
         ],
       ),
     );
   }
+
+// Helper icon button builder
+  Widget _iconButton(IconData icon, String tooltip, VoidCallback onPressed) {
+    return IconButton(
+      icon: Icon(icon, size: 20, color: Colors.white60),
+      tooltip: tooltip,
+      onPressed: onPressed,
+    );
+  }
+
 }
 
 class CodeBlockBuilder extends MarkdownElementBuilder {
